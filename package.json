@@ -1,0 +1,8 @@
+{
+  "name": "sakuteki_shougi",
+  "version": "0.1",
+  "description": "",
+  "dependencies": {
+    "express": "^4.15.2"
+  }
+}
