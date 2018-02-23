@@ -17,22 +17,27 @@ game.init(io);
 
 io.on('connection', (socket) => {
     //NOTE TO SELF: don't execute anything besides socket.on in here i.e. console.log(socket.id)
+    //NOTE TO SELF: emit passes data using JSON.stringify, so cannot send object.prototype properties or functions
     
     socket.on('disconnect', () => {
     });
     
     socket.on('test', (data) => {
-        //game.test(data);
+        game.test(data);
         //io.to(socket.id).emit('test', socket.id);
+        //socket.emit('test');
     });
     
-    socket.on('enter', (data) => {
+    socket.on('enter', () => {
+        //if a seat is empty, register this socket as player and send something back
+        
     });
     
     socket.on('exit', (data) => {
     });
     
-    socket.on('move', (data) => {
+    socket.on('action', (data) => {
+        //handles action made by player
     });
 
 });
