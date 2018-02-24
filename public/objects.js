@@ -1,18 +1,22 @@
 //=============================================================================
 // ** BattleManager
 //=============================================================================
+
+// handles game_actions and client-server interaction
+
 function BattleManager() {
     throw new Error('This is a static class');
 }
 
 BattleManager.init = function() {
-    this.board = new Game_Board();
-    this.fogOfWar = new Game_Fog();
+    this.board = new Game_Board();    
 };
 
 //=============================================================================
 // ** Game_Board
 //=============================================================================
+
+// handles dynamic board objects
 
 function Game_Board() {
     this.initialize.apply(this, arguments);
@@ -21,15 +25,19 @@ function Game_Board() {
 Game_Board.prototype.initialize = function() {
     this.playerPieces = [];
     this.enemyPieces = [];
+    this.fogOfWar = new Game_Fog();
 };
 
 Game_Board.prototype.loadPieces = function(pieces) {
     //load pieces passed from server, from enter success callback
+    //use drop action for pieces coming out of fog
 };
 
 //=============================================================================
 // ** Game_Fog
 //=============================================================================
+
+// handles fog of war
 
 function Game_Fog() {
     this.initialize.apply(this, arguments);
@@ -60,6 +68,7 @@ Game_Fog.prototype.isFog = function(x, y) {
     return this._grid[y][x] === 0;
 };
 
+//this might not ever see use
 Game_Fog.prototype.applyGridToSprite = function() {
     for (var y = 0; y < 9; y++) {
         for (var x = 0; x < 9; x++) {

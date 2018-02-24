@@ -1,4 +1,5 @@
 "use strict";
+
 //=============================================================================
 // ** Game
 //=============================================================================
@@ -97,7 +98,7 @@ Game._enter = function() {
 
 Game._onAssetsLoaded = function() {
     Game._createSocket();
-    //should create background with tatami tiling texture 
+    //TODO: create background with tatami tiling texture 
     Game._createContext();
     Game._createBoard();
     Game._createHand();
