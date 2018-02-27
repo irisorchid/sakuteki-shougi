@@ -12,25 +12,125 @@ BattleManager.init = function() {
     this.board = new Game_Board();    
 };
 
+BattleManager.loadBoardState = function(pieces) {
+    this.board.loadBoardState(pieces);
+};
+
 //=============================================================================
 // ** Game_Board
 //=============================================================================
 
 // handles dynamic board objects
+// add load function here for server data input?
 
 function Game_Board() {
     this.initialize.apply(this, arguments);
 }
 
 Game_Board.prototype.initialize = function() {
-    this.playerPieces = [];
-    this.enemyPieces = [];
     this.fogOfWar = new Game_Fog();
+    
+    this._setEmptyBoard();
+    this._initializePieces();
 };
 
-Game_Board.prototype.loadPieces = function(pieces) {
+
+Game_Board.prototype._setEmptyBoard = function() {
+    this._gamePieces = [];
+    for (var i = 0; i < 8; i++) {
+        this._gamePieces[i] = [];
+    }
+};
+
+Game_Board.prototype._initializePieces = function() {
+    //2 ou hisha kaku
+    for (var i = 0; i < 3; i++) {
+        for (var n = 0; n < 2; n++) {
+            this._gamePieces[i].push(new Game_Piece(i));
+        }
+    }
+    //4 kin gin keima kyosha
+    for (var i = 3; i < 7; i++) {
+        for (var n = 0; n < 4; n++) {
+            this._gamePieces[i].push(new Game_Piece(i));
+        }
+    }
+    //18 fuhyou
+    for (var n = 0; n < 18; n++) {
+        this._gamePieces[i].push(new Game_Piece(7));
+    }
+};
+
+Game_Board.prototype.loadBoardState = function(pieces) {
     //load pieces passed from server, from enter success callback
     //use drop action for pieces coming out of fog
+    //console.log(pieces.length);
+    for (var i = 0; i < pieces.length; i++) {
+        var piece = this.nextInactivePiece(pieces[i].id);
+        if (piece !== null) {
+            piece.setPieceStatus(pieces[i].x, pieces[i].y, pieces[i].alliance, pieces[i].promoted);
+            Game.context.stage.addChild(piece._sprite);
+        }
+    }
+};
+
+Game_Board.prototype.nextInactivePiece = function(id) {
+    for (var i = 0; i < this._gamePieces[id].length; i++) {
+        if (!this._gamePieces[id][i].isActive()) {
+            return this._gamePieces[id][i];
+        }
+    }
+    return null;
+};
+
+//=============================================================================
+// ** Game_Piece
+//=============================================================================
+
+function Game_Piece() {
+    this.initialize.apply(this, arguments);
+}
+
+Game_Piece.prototype.initialize = function(id, x=-1, y=-1, alliance=1, promoted=false, update_board=false) {
+    this._id = id;
+    this._x = x;
+    this._y = y;
+    this._alliance = alliance;
+    this._promoted = promoted;
+    this._texture = new PIXI.Texture(PIXI.loader.resources['pieces'].texture);
+    this._sprite = new PIXI.Sprite(this._texture);
+    
+    if (update_board) {
+        this.updateFrame();
+        this.updateLocation();
+    }
+};
+
+Game_Piece.prototype.setPieceStatus = function(x=this._x, y=this._y, alliance=this._alliance, promoted=this._promoted) {
+    this._x = x;
+    this._y = y;
+    this._alliance = alliance;
+    this._promoted = promoted;
+    this.updateFrame();
+    this.updateLocation();
+};
+
+//should add update function
+
+Game_Piece.prototype.isActive = function() {
+    return this._x !== -1 && this._y !== -1;
+};
+
+Game_Piece.prototype.updateFrame = function() {
+    var frame_x = this._id * 64;
+    var frame_y = this._alliance * 128 + (this._promoted ? 64 : 0);
+    
+    this._sprite.texture.frame = new PIXI.Rectangle(frame_x, frame_y, 64, 64);
+};
+
+Game_Piece.prototype.updateLocation = function() {
+    this._sprite.x = (Game.WINDOW_WIDTH + 576) / 2 - (this._x + 1) * 64;
+    this._sprite.y = (Game.WINDOW_HEIGHT - 576) / 2 + this._y * 64;
 };
 
 //=============================================================================

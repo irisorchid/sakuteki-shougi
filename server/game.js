@@ -22,8 +22,27 @@ var game = (function() {
             socket.emit('enter_fail');
         } else {
             players[player] = socket.id;
-            socket.emit('enter_success'); //should emit some data
+            socket.emit('enter_success', defaultSenteBoard()); //should emit some data
         }
+    };
+    
+    var defaultSenteBoard = function() {
+        var board = [];
+        board.push({id: 0, x: 4, y: 8, alliance: 0, promoted: true});
+        board.push({id: 1, x: 1, y: 7, alliance: 0, promoted: false});
+        board.push({id: 2, x: 7, y: 7, alliance: 0, promoted: false});
+        board.push({id: 3, x: 3, y: 8, alliance: 0, promoted: false});
+        board.push({id: 3, x: 5, y: 8, alliance: 0, promoted: false});
+        board.push({id: 4, x: 2, y: 8, alliance: 0, promoted: false});
+        board.push({id: 4, x: 6, y: 8, alliance: 0, promoted: false});
+        board.push({id: 5, x: 1, y: 8, alliance: 0, promoted: false});
+        board.push({id: 5, x: 7, y: 8, alliance: 0, promoted: false});
+        board.push({id: 6, x: 0, y: 8, alliance: 0, promoted: false});
+        board.push({id: 6, x: 8, y: 8, alliance: 0, promoted: false});
+        for (var i = 0; i < 9; i++) {
+            board.push({id: 7, x: i, y: 6, alliance: 0, promoted: false});
+        }
+        return board;
     };
     
     var actionHandler = function(id, data) {

@@ -74,21 +74,11 @@ Game._createHand = function() {
     this.context.stage.addChild(this._enemyHandFogSprite);
 };
 
-Game._createPieceTexture = function() {
-    this.pieceTexture = PIXI.loader.resources['pieces'].texture;
-    this.pieceFrame = []; //11 and 27 are empty sprites
-    for (var y = 0; y < 4; y++) {
-        for (var x = 0; x < 8; x++) {
-            this.pieceFrame.push(new PIXI.Rectangle(x*64, y*64, 64, 64));
-        }
-    }
-};
-
 Game._enter = function() {
-    this.socket.on('enter_success', () => {
-        //do something
+    this.socket.on('enter_success', (data) => {
         //should receive list of pieces with positions {id, x, y, alliance, promoted}
         //populate some array with sprite piece
+        BattleManager.loadBoardState(data);
     });
     this.socket.on('enter_fail', () => {
         //do something
@@ -102,7 +92,6 @@ Game._onAssetsLoaded = function() {
     Game._createContext();
     Game._createBoard();
     Game._createHand();
-    Game._createPieceTexture();
     BattleManager.init();
     
     Game._enter();
