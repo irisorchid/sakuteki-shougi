@@ -29,7 +29,7 @@ io.on('connection', (socket) => {
         game.addPlayer(socket);
     });
     
-    socket.on('action', (data) => {
+    socket.on('take_turn', (data) => {
         //handles action made by player
     });
 

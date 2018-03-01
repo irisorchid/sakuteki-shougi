@@ -24,9 +24,11 @@ Game._createSocket = function() {
     
     this.socket.on('test', (data) => { console.log(data); });
     
-    //this.socket.on('update');
-    
     //this.socket.on('newplayer');
+    
+    //this.socket.on('turn_success'); //apply changes to board, set turn (set pieces inactive?)
+    
+    //this.socket.on('turn_fail'); //do something
     
     //this.socket.emit('test', 'hello world');
 };
@@ -76,8 +78,7 @@ Game._createHand = function() {
 
 Game._enter = function() {
     this.socket.on('enter_success', (data) => {
-        //should receive list of pieces with positions {id, x, y, alliance, promoted}
-        //populate some array with sprite piece
+        //receive data as an array of objects: {id, x, y, alliance, promoted}
         BattleManager.loadBoardState(data);
     });
     this.socket.on('enter_fail', () => {
