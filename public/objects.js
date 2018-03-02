@@ -11,6 +11,12 @@ function BattleManager() {
 BattleManager.init = function() {
     this._board = new Game_Board();
     this._turn = 0;
+    Game.socket.on('action_success', (data) => {
+        this.applyAction(data); //eventually shouldn't need data, should just have calculations on client code
+    });
+    Game.socket.on('action_fail', () => {
+        this.cancelAction();
+    });
 };
 
 BattleManager.isTurn = function() {
@@ -18,16 +24,23 @@ BattleManager.isTurn = function() {
 };
 
 BattleManager.loadBoardState = function(state) {
-    //set turn to player or enemy?, don't have that data yet
-    this._board.loadPieces(state);
+    this._turn = state.player;
+    this._board.loadPieces(state.board);
 };
 
-BattleManager.advanceTurn = function() {
+BattleManager.applyAction = function(data) {
+    //this._board.performAction(this._currentAction, data);
     this._turn = (this._turn + 1) % 2;
 };
 
-BattleManager.takeTurn = function(action) {
-    Game.socket.emit('take_turn', action);
+BattleManager.cancelAction = function() {
+    this._currentAction.piece.updateLocation();
+};
+
+BattleManager.sendAction = function(action) {
+    this._currentAction = action;
+    //action.send or something
+    //Game.socket.emit('action', action);
 };
 
 //=============================================================================
@@ -196,9 +209,7 @@ Game_Piece.prototype._updateFrame = function() {
 };
 
 Game_Piece.prototype._updateLocation = function() {
-    //this._sprite.interactive = this._alliance === 0;
-    if (!(this._sprite.visible = !this.isHidden())) { //xd
-        //use 0,0 for now
+    if (!(this._sprite.visible = !this.isHidden())) { //xd //use 0,0 for now
         this._sprite.x = 0;
         this._sprite.y = 0;
     } else if (this.isOnHand()) {
@@ -215,37 +226,6 @@ Game_Piece.prototype._pushToFront = function() {
 };
 
 Game_Piece.prototype._onPointerUp = function() {
-    /*
-    var mousePosition = Game.context.renderer.plugins.interaction.mouse.global;
-    var piece = this.parentObj.object;
-
-    if (this.parentObj.isActive()) {
-        var localX = (mousePosition.x - (Game.WINDOW_WIDTH - 576) / 2);
-        var localY = (mousePosition.y - (Game.WINDOW_HEIGHT - 576) / 2);
-        var destX = Math.floor(localX / 64);
-        var destY = Math.floor(localY / 64);
-
-        var actionList = new Game_ActionList(piece, destX, destY);
-
-        var checkForPromote = false;
-        if (actionList.isValid() && piece.onBoard() && piece.canPromote(destY)) {
-            checkForPromote = !piece.mustPromote(destX, destY);
-        }
-
-        Game.processEvent(actionList, checkForPromote);
-        this.parentObj.deactivate();
-    } else {
-        if (!BattleManager.isPlayerTurn() || BattleManager.turn != piece.alliance) {
-            return;
-        }
-
-        this.x = mousePosition.x - this.width / 2;
-        this.y = mousePosition.y - this.height / 2;
-        
-        this.parentObj.activate();
-        Game.pushToFront(this);
-    }
-    */
     if (!(BattleManager.isTurn() && this._alliance === 0)) {
         return;
     }
@@ -256,7 +236,8 @@ Game_Piece.prototype._onPointerUp = function() {
         var boardY = Math.floor((mousePosition.y - (Game.WINDOW_HEIGHT - 576) / 2) / 64);
             
         //just place piece for now instead of applying action
-        this.move(boardX, boardY);
+        //this.move(boardX, boardY);
+        //BattleManager.takeTurn(new Game_Action());
             
         this._active = false;
     } else {

@@ -1,16 +1,19 @@
 "use strict";
 
+var Shougi = require('./shougi.js');
 
 var game = (function() {
     
     var io; //move to global?
-    var board; //abstract to module?
+    var shougi; //abstract to module?
     var players; //abstract to module?
     var active_player; //0 == sente, 1 == gote
     var turn;
     
     var init = function(server) {
         io = server;
+        shougi = new Shougi();
+        //shougi.printBoard();
         players = { 0: null, 1: null };
         active_player = 0;
         turn = 0;
@@ -22,30 +25,15 @@ var game = (function() {
             socket.emit('enter_fail');
         } else {
             players[player] = socket.id;
-            socket.emit('enter_success', defaultSenteBoard()); //should emit some data
+            players[socket.id] = player;
+            socket.emit('enter_success', {
+                player: (player === active_player) ? 0 : 1, 
+                board: shougi.getBoardState(player)
+            }); //fix this after to set correct for calling player
         }
     };
     
-    var defaultSenteBoard = function() {
-        var board = [];
-        board.push({id: 0, x: 4, y: 8, alliance: 0, promoted: true});
-        board.push({id: 1, x: 1, y: 7, alliance: 0, promoted: false});
-        board.push({id: 2, x: 7, y: 7, alliance: 0, promoted: false});
-        board.push({id: 3, x: 3, y: 8, alliance: 0, promoted: false});
-        board.push({id: 3, x: 5, y: 8, alliance: 0, promoted: false});
-        board.push({id: 4, x: 2, y: 8, alliance: 0, promoted: false});
-        board.push({id: 4, x: 6, y: 8, alliance: 0, promoted: false});
-        board.push({id: 5, x: 1, y: 8, alliance: 0, promoted: false});
-        board.push({id: 5, x: 7, y: 8, alliance: 0, promoted: false});
-        board.push({id: 6, x: 0, y: 8, alliance: 0, promoted: false});
-        board.push({id: 6, x: 8, y: 8, alliance: 0, promoted: false});
-        for (var i = 0; i < 9; i++) {
-            board.push({id: 7, x: i, y: 6, alliance: 0, promoted: false});
-        }
-        return board;
-    };
-    
-    var actionHandler = function(id, data) {
+    var actionHandler = function(socket, action) {
         
     };
     

@@ -17,7 +17,6 @@ game.init(io);
 
 io.on('connection', (socket) => {
     //NOTE TO SELF: don't execute anything besides socket.on in here i.e. console.log(socket.id)
-    //NOTE TO SELF: emit passes data using JSON.stringify, so cannot send object.prototype properties or functions
     //io.to(socket.id).emit('test', socket.id); or socket.emit('test');
     
     socket.on('disconnect', () => {
@@ -29,8 +28,8 @@ io.on('connection', (socket) => {
         game.addPlayer(socket);
     });
     
-    socket.on('take_turn', (data) => {
-        //handles action made by player
+    socket.on('action', (data) => {
+        game.actionHandler(socket, data);
     });
 
 });

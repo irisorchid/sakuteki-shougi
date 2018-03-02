@@ -21,14 +21,7 @@ Game.preloadAllAssets = function() {
 
 Game._createSocket = function() {
     this.socket = io();
-    
     this.socket.on('test', (data) => { console.log(data); });
-    
-    //this.socket.on('newplayer');
-    
-    //this.socket.on('turn_success'); //apply changes to board, set turn (set pieces inactive?)
-    
-    //this.socket.on('turn_fail'); //do something
     
     //this.socket.emit('test', 'hello world');
 };
@@ -78,8 +71,7 @@ Game._createHand = function() {
 
 Game._enter = function() {
     this.socket.on('enter_success', (data) => {
-        //receive data as an array of objects: {id, x, y, alliance, promoted}
-        BattleManager.loadBoardState(data);
+        BattleManager.loadBoardState(data); //player: int, board: {id, x, y, alliance, promoted}
     });
     this.socket.on('enter_fail', () => {
         //do something
