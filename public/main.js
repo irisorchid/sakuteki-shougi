@@ -19,13 +19,6 @@ Game.preloadAllAssets = function() {
         .load(Game._onAssetsLoaded);
 };
 
-Game._createSocket = function() {
-    this.socket = io();
-    this.socket.on('test', (data) => { console.log(data); });
-    
-    //this.socket.emit('test', 'hello world');
-};
-
 Game._createContext = function() {
     this.context = new PIXI.Application({
         width: this.WINDOW_WIDTH, 
@@ -69,25 +62,12 @@ Game._createHand = function() {
     this.context.stage.addChild(this._enemyHandFogSprite);
 };
 
-Game._enter = function() {
-    this.socket.on('enter_success', (data) => {
-        BattleManager.loadBoardState(data); //player: int, board: {id, x, y, alliance, promoted}
-    });
-    this.socket.on('enter_fail', () => {
-        //do something
-    });
-    this.socket.emit('enter_room');
-};
-
 Game._onAssetsLoaded = function() {
-    Game._createSocket();
     //TODO: create background with tatami tiling texture 
     Game._createContext();
     Game._createBoard();
     Game._createHand();
     BattleManager.init();
-    
-    Game._enter();
 };
 
 //=============================================================================

@@ -41,6 +41,7 @@ Shougi.prototype.initialBoard = function() {
     this.board[5] = new Array(9).fill(null);
 };
 
+//doesn't calculate fog yet
 Shougi.prototype.getBoardState = function(player) {
     var temp_board = [];
     if (player === 0) {

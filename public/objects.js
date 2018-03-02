@@ -11,12 +11,8 @@ function BattleManager() {
 BattleManager.init = function() {
     this._board = new Game_Board();
     this._turn = 0;
-    Game.socket.on('action_success', (data) => {
-        this.applyAction(data); //eventually shouldn't need data, should just have calculations on client code
-    });
-    Game.socket.on('action_fail', () => {
-        this.cancelAction();
-    });
+    this._createSocket();
+    this._enter();
 };
 
 BattleManager.isTurn = function() {
@@ -29,19 +25,45 @@ BattleManager.loadBoardState = function(state) {
 };
 
 BattleManager.applyAction = function(data) {
-    //this._board.performAction(this._currentAction, data);
+    //this._board.loadUpdates(data); //pieces remove, reveal; fog changes
     this._turn = (this._turn + 1) % 2;
 };
 
 BattleManager.cancelAction = function() {
-    this._currentAction.piece.updateLocation();
+    //this._currentAction.cancel();
 };
 
 BattleManager.sendAction = function(action) {
-    this._currentAction = action;
+    //this._currentAction = action;
+    //this._currentAction.send();
     //action.send or something
-    //Game.socket.emit('action', action);
+    //should freeze app until action returns
+    //Game._socket.emit('action', action);
 };
+
+BattleManager._createSocket = function() {
+    this._socket = io();
+    this._socket.on('test', (data) => {
+        console.log(data);
+    });
+    /*
+    Game._socket.on('action_success', (data) => {
+        this.applyAction(data); //player: player that made action, //actions: list of updates
+    });
+    Game._socket.on('action_fail', () => {
+        this.cancelAction();
+    });*/
+}
+
+BattleManager._enter = function() {
+    this._socket.on('enter_success', (data) => {
+        this.loadBoardState(data); //player: int; board: {id, x, y, alliance, promoted}
+    });
+    this._socket.on('enter_fail', () => {
+        //do something
+    });
+    this._socket.emit('enter_room');
+}
 
 //=============================================================================
 // ** Game_Board
@@ -67,6 +89,10 @@ Game_Board.prototype.loadPieces = function(pieces) {
     }
     
     //apply fog
+};
+
+Game_Board.prototype.loadUpdates = function(data) {
+    
 };
 
 Game_Board.prototype._clearBoard = function() {
@@ -175,6 +201,9 @@ Game_Piece.prototype.canPromote = function() {
 };
 
 Game_Piece.prototype.move = function(x, y, promote=false) {
+    if (x < 0 || x > 8) { return; }
+    if (y < 0 || y > 8) { return; }
+    
     this._x = x;
     this._y = y;
     if (promote) {
@@ -184,10 +213,10 @@ Game_Piece.prototype.move = function(x, y, promote=false) {
 };
 
 Game_Piece.prototype.promote = function() {
-    if (this.canPromote) {
-        this._promoted = true;
-        this._updateFrame();
-    }
+    if (!this.canPromote) { return; }
+        
+    this._promoted = true;
+    this._updateFrame();
 };
 
 Game_Piece.prototype.remove = function(capture=false) {
@@ -234,12 +263,12 @@ Game_Piece.prototype._onPointerUp = function() {
     if (this._active) {
         var boardX = Math.floor(((Game.WINDOW_WIDTH + 576) / 2 - mousePosition.x) / 64);
         var boardY = Math.floor((mousePosition.y - (Game.WINDOW_HEIGHT - 576) / 2) / 64);
-            
+        
+        this._active = false;        
         //just place piece for now instead of applying action
         //this.move(boardX, boardY);
-        //BattleManager.takeTurn(new Game_Action());
-            
-        this._active = false;
+        //BattleManager.takeTurn(new Game_Action());    
+        
     } else {
         this._sprite.x = mousePosition.x - this._sprite.width / 2;
         this._sprite.y = mousePosition.y - this._sprite.height / 2;
@@ -291,7 +320,6 @@ Game_Fog.prototype.isFog = function(x, y) {
     return this._grid[y][x] === 0;
 };
 
-//some of these might not ever see use
 Game_Fog.prototype.applyGridToSprite = function() {
     for (var y = 0; y < 9; y++) {
         for (var x = 0; x < 9; x++) {
@@ -300,6 +328,7 @@ Game_Fog.prototype.applyGridToSprite = function() {
     }
 };
 
+/*
 Game_Fog.prototype.activate = function(x, y) {
     this._grid[y][x] = 0;
     this._spriteGroup.children[y*9+x].alpha = 0.8;
@@ -309,13 +338,4 @@ Game_Fog.prototype.deactivate = function(x, y) {
     this._grid[y][x] = 1;
     this._spriteGroup.children[y*9+x].alpha = 0;
 };
-
-//=============================================================================
-// ** Game_Action
-//=============================================================================
-
-function Game_Action() {
-    this.initialize.apply(this, arguments);
-}
-
-//use drop action for pieces coming out of fog
+*/

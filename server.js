@@ -25,11 +25,11 @@ io.on('connection', (socket) => {
     socket.on('test', (data) => { console.log(data); });
     
     socket.on('enter_room', () => {
-        game.addPlayer(socket);
+        game.addPlayer(socket.id);
     });
     
     socket.on('action', (data) => {
-        game.actionHandler(socket, data);
+        game.actionHandler(socket.id, data);
     });
 
 });
