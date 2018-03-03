@@ -28,7 +28,7 @@ var game = (function() {
             console.log(players);
             io.to(id).emit('enter_success', {
                 player: (player === active_player) ? 0 : 1, 
-                pieces: shougi.getBoardState(player)
+                pieces: shougi.getFullBoardState(player)
             });
         }
     };
@@ -41,6 +41,7 @@ var game = (function() {
     };
     
     var actionHandler = function(id, action) {
+        /*
         active_player = 1 - active_player;
         io.to(id).emit('action_success'); //just do this for now
         var enemy_id = players[1 - players[id]];
@@ -53,6 +54,14 @@ var game = (function() {
             promote: action.promote
         };
         io.to(enemy_id).emit('enemy_action', new_action);
+        */
+        
+        //check if action legal
+        
+        //if legal then process
+        
+        //else terminate
+        io.to(id).emit('action_fail');
     };
     
     var sendUpdate = function(data) {

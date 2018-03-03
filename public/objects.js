@@ -25,6 +25,7 @@ BattleManager.isTurn = function() {
 BattleManager.loadBoardState = function(state) {
     this._turn = state.player;
     this._board.loadPieces(state.pieces);
+    //this._board.applyFog(state.fog);
 };
 
 BattleManager.performAction = function(piece, action) {
@@ -43,16 +44,17 @@ BattleManager._createSocket = function() {
     this._socket.on('action_success', (data) => {
         //data => player: player that made action; actions: list of updates; fog: grid
         this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
-        //this._board.loadUpdates(data); //actions => remove, reveal (all enemy actions)
+        //this._board.loadActions(data.actions); //actions => remove, reveal (all enemy actions)
+        //this._board.applyFog(data.fog); //2d array
         this._turn = (this._turn + 1) % 2;
         this.pendingAction = false;
     });
     this._socket.on('action_fail', () => {
-        this._currentPiece.updateLocation();
+        this._currentPiece._updateLocation();
         this.pendingAction = false;
     });
     this._socket.on('enemy_action', (data) => {
-        this._board.loadUpdates(data);
+        this._board.loadActions(data.actions);
         this._turn = (this._turn + 1) % 2;
     });
 }
@@ -76,7 +78,7 @@ function Game_Board() {
 }
 
 Game_Board.prototype.initialize = function() {
-    this.fogOfWar = new Game_Fog();
+    this._fogOfWar = new Game_Fog();
     this._clearBoard();
 };
 
@@ -89,12 +91,20 @@ Game_Board.prototype.loadPieces = function(pieces) {
             piece.loadFromSource(pieces[i].x, pieces[i].y, pieces[i].alliance, pieces[i].promoted);
         }
     }
-    
-    //apply fog
 };
 
-Game_Board.prototype.loadUpdates = function(updates) {
-    this._pieceAt(updates.x, updates.y).move(updates.destX, updates.destY);
+Game_Board.prototype.loadActions = function(actions) {
+//remove{x, y, capture} //reveal{id, x, y, promote}
+    for (var i = 0; i < actions.remove.length; i++) {
+        this._pieceAt(actions.remove[i].x, actions.remove[i].y).remove(actions.remove[i].capture);
+    }
+    for (var i = 0; i < actions.reveal.length; i++) {
+        this._nextHiddenPiece(actions.reveal[i].id).move(actions.reveal[i].x, actions.reveal[i].y, actions.reveal[i].promote);
+    }
+};
+
+Game_Board.prototype.applyFog = function(fog) {
+    this._fogOfWar.applyFogGrid(fog);
 };
 
 Game_Board.prototype._clearBoard = function() {
@@ -114,16 +124,6 @@ Game_Board.prototype._pieceAt = function(x, y) {
     }
     return null;
 };
-
-/*
-Game_Board.prototype._nextPieceOnHand = function(id) {
-    for (var i = 0; i < this._gamePieces[id].length; i++) {
-        if (this._gamePieces[id][i].isOnHand()) {
-            return this._gamePieces[id][i];
-        }
-    }
-    return null;
-};*/
 
 Game_Board.prototype._nextHiddenPiece = function(id) {
     for (var i = 0; i < this._gamePieces[id].length; i++) {
@@ -170,7 +170,7 @@ Game_Piece.prototype.initialize = function(id, x=-1, y=-1, alliance=1, promoted=
     this._sprite.interactive = true;
     this._active = false;
     
-    //this only works with mouse pointers not touch, touch logic is different
+    //using mouse events because touch logic is different
     this._sprite.on('mouseup', this._onPointerUp.bind(this));
     this._sprite.on('mousemove', this._onPointerMove.bind(this));
     
