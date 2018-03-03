@@ -43,7 +43,7 @@ BattleManager._createSocket = function() {
     this._socket.on('action_success', (data) => {
         //data => player: player that made action; actions: list of updates; fog: grid
         this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
-        this._board.loadUpdates(data); //actions => remove, reveal (all enemy actions)
+        //this._board.loadUpdates(data); //actions => remove, reveal (all enemy actions)
         this._turn = (this._turn + 1) % 2;
         this.pendingAction = false;
     });
@@ -52,6 +52,7 @@ BattleManager._createSocket = function() {
         this.pendingAction = false;
     });
     this._socket.on('enemy_action', (data) => {
+        this._board.loadUpdates(data);
         this._turn = (this._turn + 1) % 2;
     });
 }
@@ -93,7 +94,7 @@ Game_Board.prototype.loadPieces = function(pieces) {
 };
 
 Game_Board.prototype.loadUpdates = function(updates) {
-    
+    this._pieceAt(updates.x, updates.y).move(updates.destX, updates.destY);
 };
 
 Game_Board.prototype._clearBoard = function() {
@@ -216,7 +217,7 @@ Game_Piece.prototype.move = function(x, y, promote=false) {
 };
 
 Game_Piece.prototype.promote = function() {
-    //if (!this.canPromote) { return; }   
+    //if (!this.canPromote) { return; }
     this._promoted = true;
     this._updateFrame();
 };

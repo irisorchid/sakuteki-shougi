@@ -44,7 +44,15 @@ var game = (function() {
         active_player = 1 - active_player;
         io.to(id).emit('action_success'); //just do this for now
         var enemy_id = players[1 - players[id]];
-        io.to(enemy_id).emit('enemy_action');
+        var new_action = {
+            id: action.id,
+            x: 8-action.x,
+            y: 8-action.y,
+            destX: 8-action.destX,
+            destY: 8-action.destY,
+            promote: action.promote
+        };
+        io.to(enemy_id).emit('enemy_action', new_action);
     };
     
     var sendUpdate = function(data) {
