@@ -17,7 +17,7 @@ var game = (function() {
         active_player = 0;
         turn = 0;
     };
-  
+    
     var addPlayer = function(id) {
         var player = (players[0] === null) ? 0 : (players[1] === null) ? 1 : null;
         if (player === null) {
@@ -25,14 +25,26 @@ var game = (function() {
         } else {
             players[player] = id;
             players[id] = player;
+            console.log(players);
             io.to(id).emit('enter_success', {
                 player: (player === active_player) ? 0 : 1, 
-                board: shougi.getBoardState(player)
-            }); 
+                pieces: shougi.getBoardState(player)
+            });
+        }
+    };
+    
+    var removePlayer = function(id) {
+        if (players[id] === 0 || players[id] === 1) {
+            players[players[id]] = null;
+            delete players[id];
+        }
     };
     
     var actionHandler = function(id, action) {
-        
+        active_player = 1 - active_player;
+        io.to(id).emit('action_success'); //just do this for now
+        var enemy_id = players[1 - players[id]];
+        io.to(enemy_id).emit('enemy_action');
     };
     
     var sendUpdate = function(data) {
@@ -42,6 +54,7 @@ var game = (function() {
     return {
         init: init,
         addPlayer: addPlayer,
+        removePlayer : removePlayer,
         actionHandler: actionHandler
     };
     

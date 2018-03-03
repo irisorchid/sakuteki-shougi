@@ -12,6 +12,9 @@ BattleManager.init = function() {
     this._board = new Game_Board();
     this._turn = 0;
     this._createSocket();
+    this.pendingAction = false;
+    this.pointerActive = false; //used to prevent some pointer glitches with i.e. start() stop()
+    
     this._enter();
 };
 
@@ -21,38 +24,36 @@ BattleManager.isTurn = function() {
 
 BattleManager.loadBoardState = function(state) {
     this._turn = state.player;
-    this._board.loadPieces(state.board);
+    this._board.loadPieces(state.pieces);
 };
 
-BattleManager.applyAction = function(data) {
-    //this._board.loadUpdates(data); //pieces remove, reveal; fog changes
-    this._turn = (this._turn + 1) % 2;
-};
-
-BattleManager.cancelAction = function() {
-    //this._currentAction.cancel();
-};
-
-BattleManager.sendAction = function(action) {
-    //this._currentAction = action;
-    //this._currentAction.send();
-    //action.send or something
-    //should freeze app until action returns
-    //Game._socket.emit('action', action);
+BattleManager.performAction = function(piece, action) {
+    this.pendingAction = true;
+    this._currentPiece = piece;
+    this._currentAction = action;
+    this._socket.emit('action', action);
 };
 
 BattleManager._createSocket = function() {
     this._socket = io();
+    
     this._socket.on('test', (data) => {
         console.log(data);
     });
-    /*
-    Game._socket.on('action_success', (data) => {
-        this.applyAction(data); //player: player that made action, //actions: list of updates
+    this._socket.on('action_success', (data) => {
+        //data => player: player that made action; actions: list of updates; fog: grid
+        this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
+        this._board.loadUpdates(data); //actions => remove, reveal (all enemy actions)
+        this._turn = (this._turn + 1) % 2;
+        this.pendingAction = false;
     });
-    Game._socket.on('action_fail', () => {
-        this.cancelAction();
-    });*/
+    this._socket.on('action_fail', () => {
+        this._currentPiece.updateLocation();
+        this.pendingAction = false;
+    });
+    this._socket.on('enemy_action', (data) => {
+        this._turn = (this._turn + 1) % 2;
+    });
 }
 
 BattleManager._enter = function() {
@@ -91,7 +92,7 @@ Game_Board.prototype.loadPieces = function(pieces) {
     //apply fog
 };
 
-Game_Board.prototype.loadUpdates = function(data) {
+Game_Board.prototype.loadUpdates = function(updates) {
     
 };
 
@@ -102,15 +103,18 @@ Game_Board.prototype._clearBoard = function() {
     }
 };
 
-Game_Board.prototype._nextPieceAt = function(id, x, y) {
-    for (var i = 0; i < this._gamePieces[id].length; i++) {
-        if (this._gamePieces[id][i].isAt(x, y)) {
-            return this._gamePieces[id][i];
-        }
+Game_Board.prototype._pieceAt = function(x, y) {
+    for (var id = 0; id < 8; id++) {
+        for (var i = 0; i < this._gamePieces[id].length; i++) {
+            if (this._gamePieces[id][i].isAt(x, y)) {
+                return this._gamePieces[id][i];
+            }
+        } 
     }
     return null;
 };
 
+/*
 Game_Board.prototype._nextPieceOnHand = function(id) {
     for (var i = 0; i < this._gamePieces[id].length; i++) {
         if (this._gamePieces[id][i].isOnHand()) {
@@ -118,7 +122,7 @@ Game_Board.prototype._nextPieceOnHand = function(id) {
         }
     }
     return null;
-};
+};*/
 
 Game_Board.prototype._nextHiddenPiece = function(id) {
     for (var i = 0; i < this._gamePieces[id].length; i++) {
@@ -201,9 +205,8 @@ Game_Piece.prototype.canPromote = function() {
 };
 
 Game_Piece.prototype.move = function(x, y, promote=false) {
-    if (x < 0 || x > 8) { return; }
-    if (y < 0 || y > 8) { return; }
-    
+    //if (x < 0 || x > 8) { return; }
+    //if (y < 0 || y > 8) { return; }
     this._x = x;
     this._y = y;
     if (promote) {
@@ -213,8 +216,7 @@ Game_Piece.prototype.move = function(x, y, promote=false) {
 };
 
 Game_Piece.prototype.promote = function() {
-    if (!this.canPromote) { return; }
-        
+    //if (!this.canPromote) { return; }   
     this._promoted = true;
     this._updateFrame();
 };
@@ -255,25 +257,37 @@ Game_Piece.prototype._pushToFront = function() {
 };
 
 Game_Piece.prototype._onPointerUp = function() {
-    if (!(BattleManager.isTurn() && this._alliance === 0)) {
-        return;
-    }
-        
+    if (!(BattleManager.isTurn() && this._alliance === 0)) { return; }
+    if (BattleManager.pendingAction) { return; }
+    
     var mousePosition = Game.context.renderer.plugins.interaction.mouse.global;
-    if (this._active) {
+    if (BattleManager.pointerActive) {
         var boardX = Math.floor(((Game.WINDOW_WIDTH + 576) / 2 - mousePosition.x) / 64);
         var boardY = Math.floor((mousePosition.y - (Game.WINDOW_HEIGHT - 576) / 2) / 64);
         
-        this._active = false;        
-        //just place piece for now instead of applying action
-        //this.move(boardX, boardY);
-        //BattleManager.takeTurn(new Game_Action());    
+        this._active = false;
+        BattleManager.pointerActive = false;
+        //TODO: promote dialog
         
+        //just use this for now
+        //TODO: change this to be better, and also not allow pieces on top of other pieces
+        if (boardX < 0 || boardX > 8) { this._updateLocation(); return; }
+        if (boardY < 0 || boardY > 8) { this._updateLocation(); return; }
+        
+        BattleManager.performAction(this, {
+            id: this._id,
+            x: this._x,
+            y: this._y,
+            destX: boardX,
+            destY: boardY,
+            promote: false
+        });
     } else {
         this._sprite.x = mousePosition.x - this._sprite.width / 2;
         this._sprite.y = mousePosition.y - this._sprite.height / 2;
         this._pushToFront();
-            
+        
+        BattleManager.pointerActive = true;
         this._active = true;
     }
 };
@@ -320,7 +334,8 @@ Game_Fog.prototype.isFog = function(x, y) {
     return this._grid[y][x] === 0;
 };
 
-Game_Fog.prototype.applyGridToSprite = function() {
+Game_Fog.prototype.applyFogGrid = function(grid) {
+    this._grid = grid;
     for (var y = 0; y < 9; y++) {
         for (var x = 0; x < 9; x++) {
             this._spriteGroup.children[y*9+x].alpha = (this._grid[y][x] === 0) ? 0.8 : 0;
