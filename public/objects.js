@@ -25,7 +25,7 @@ BattleManager.isTurn = function() {
 BattleManager.loadBoardState = function(state) {
     this._turn = state.player;
     this._board.loadPieces(state.pieces);
-    //this._board.applyFog(state.fog);
+    this._board.applyFog(state.fog);
 };
 
 BattleManager.performAction = function(piece, action) {
@@ -41,11 +41,14 @@ BattleManager._createSocket = function() {
     this._socket.on('test', (data) => {
         console.log(data);
     });
+    this._socket.on('disconnect', () => {
+        console.log("d/c");
+    });
     this._socket.on('action_success', (data) => {
         //data => player: player that made action; actions: list of updates; fog: grid
         this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
-        //this._board.loadActions(data.actions); //actions => remove, reveal (all enemy actions)
-        //this._board.applyFog(data.fog); //2d array
+        this._board.loadActions(data.actions); //actions => remove, reveal (all enemy actions)
+        this._board.applyFog(data.fog); //2d array
         this._turn = (this._turn + 1) % 2;
         this.pendingAction = false;
     });
@@ -271,7 +274,8 @@ Game_Piece.prototype._onPointerUp = function() {
         //TODO: promote dialog
         
         //just use this for now
-        //TODO: change this to be better, and also not allow pieces on top of other pieces
+        //TODO: change this to be better
+        if (BattleManager._board._pieceAt(boardX, boardY)) { this._updateLocation(); return; }
         if (boardX < 0 || boardX > 8) { this._updateLocation(); return; }
         if (boardY < 0 || boardY > 8) { this._updateLocation(); return; }
         

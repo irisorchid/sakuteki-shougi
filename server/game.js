@@ -28,7 +28,16 @@ var game = (function() {
             console.log(players);
             io.to(id).emit('enter_success', {
                 player: (player === active_player) ? 0 : 1, 
-                pieces: shougi.getFullBoardState(player)
+                pieces: shougi.getFullBoardState(player),
+                fog: [[0,0,0,0,0,0,0,0,0],
+                [1,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,0,0,0,0],
+                [0,0,0,0,0,1,0,0,0],
+                [0,0,0,0,0,0,0,0,0],
+                [0,0,1,0,0,0,0,0,0],
+                [0,0,0,0,0,0,1,0,0],
+                [0,0,0,0,0,0,0,0,0]]
             });
         }
     };
@@ -59,6 +68,8 @@ var game = (function() {
         //check if action legal
         
         //if legal then process
+        
+        //send data => {player:, action: remove, reveal, fog:}
         
         //else terminate
         io.to(id).emit('action_fail');

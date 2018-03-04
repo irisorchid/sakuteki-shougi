@@ -10,6 +10,7 @@ function Shougi() {
 
 Shougi.prototype.initialize = function() {
     this.initialBoard();
+    this.fog = [new Fog(), new Fog()];
 };
 
 Shougi.prototype.initialBoard = function() {
@@ -106,6 +107,22 @@ Piece.prototype.initialize = function(id, alliance, promoted) {
     this.id = id;
     this.alliance = alliance;
     this.promoted = promoted;
+};
+
+//=============================================================================
+// ** Fog
+//=============================================================================
+
+//one fog for each player
+function Fog() {
+    this.initialize.apply(this, arguments);
+}
+
+Fog.prototype.initialize = function() {
+    this.grid = [];
+    for (var i = 0; i < 9; i++) {
+        this.grid.push(new Array(9).fill(0));
+    }
 };
 
 module.exports = Shougi;
