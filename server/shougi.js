@@ -68,7 +68,6 @@ Shougi.prototype.applyFog = function(player) {
             
         }
     }
-    return this.fog[player];
 };
 
 Shougi.prototype.resetFog = function(player) {
@@ -76,6 +75,54 @@ Shougi.prototype.resetFog = function(player) {
     for (var i = 0; i < 9; i++) {
         this.fog[player].push(new Array(9).fill(0));
     }
+};
+
+Shougi.prototype.takeTurn = function(player, action) {
+    var updates = {};
+    
+    //check for piece capture, make sure to handle blind capture
+    if (this.board[action.destY][action.destX] !== null) {
+        
+    }
+    
+    //move piece to location
+    
+    //calculate fog
+    this.applyFog(player);
+    
+    //reveal pieces - NOT DONE
+    
+    this.board[action.destY][action.destX]
+};
+
+Shougi.prototype.legalMove = function(player, action) {
+    //should assert and throw error on action format being incorrect / illegal
+    if (typeof action.id !== 'number') { return false; }
+    if (typeof action.x !== 'number') { return false; }
+    if (typeof action.y !== 'number') { return false; }
+    if (typeof action.destX !== 'number') { return false; }
+    if (typeof action.destY !== 'number') { return false; }
+    if (typeof action.promote !== 'boolean') { return false; }
+    
+    if (action.id < 0) { return false; }
+    if (action.id > 8) { return false; }
+    if (action.destX < 0) { return false; }
+    if (action.destX > 8) { return false; }
+    if (action.destY < 0) { return false; }
+    if (action.destY > 8) { return false; }
+    if (action.x < -1) { return false; }
+    if (action.x > 8) { return false; }
+    if (action.y < -1) { return false; }
+    if (action.y > 8) { return false; }
+    
+    //check not moving in place
+    if (action.x === action.destX && action.y === action.destY) { return false; }
+    //check if location is occupied by allied piece; cannot capture own piece
+    if (this.board[y][x] !== null && this.board[y][x].alliance === player) { return false; }
+    //TODO: check if piece's movement can move to location (also if movement is blocked)
+    //TODO: reroute movement for hisha / kaku if blocked
+    
+    return true;
 };
 
 Shougi.prototype.getFullBoardState = function(player) {
@@ -112,6 +159,7 @@ Shougi.prototype.getFullBoardState = function(player) {
     return temp_board;
 };
 
+/*
 Shougi.prototype.printBoard = function() {
     for (var y = 0; y < 9; y++) {
         var temp = '';
@@ -124,7 +172,27 @@ Shougi.prototype.printBoard = function() {
         }
         console.log(temp);
     }
+};*/
+
+Shougi.prototype.getVision = function(id, x, y) {
+    //actually depends on id but use 1 aoe for now for proof of concept
+    //only need board for blocked vision if its used?
+    var vision = [];
+    
+    for (var j = -1; j < 2; j++) {
+        for (var i = -1; i < 2; i++) {
+            var offsetX = x+i;
+            var offsetY = y+j;
+            if (offsetX >= 0 && offsetX < 9 && offsetY >= 0 && offsetY < 9) {
+                vision.push({ x: x+i, y: y+j });
+            }
+        }
+    }
+    
+    return vision
 };
+
+Shougi.prototype.getMovement = function(id, x, y) {};
 
 //=============================================================================
 // ** Piece
@@ -139,6 +207,15 @@ Piece.prototype.initialize = function(id, alliance, promoted) {
     this.id = id;
     this.alliance = alliance;
     this.promoted = promoted;
+    this.currentVision = [];
 };
+
+//=============================================================================
+// ** Fog
+//=============================================================================
+
+function Fog() {
+    this.initialize.apply(this, arguments);
+}
 
 module.exports = Shougi;

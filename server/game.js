@@ -29,7 +29,7 @@ var game = (function() {
             io.to(id).emit('enter_success', {
                 player: (player === active_player) ? 0 : 1, 
                 pieces: shougi.getFullBoardState(player),
-                fog: shougi.applyFog(player)
+                fog: shougi.fog[player];
             });
         }
     };
@@ -57,13 +57,15 @@ var game = (function() {
         io.to(enemy_id).emit('enemy_action', new_action);
         */
         
-        //check if action legal
-        
         //if legal then process
-        
-        //send data => {player:, action: remove, reveal, fog:}
-        
-        //else terminate
+        //action {id, x, y, destX, destY, promote}
+        if (shougi.legalMove(players[id], action)) {
+            //data = processMove
+            //send data => {player:, action: remove, reveal, fog:}
+            //io.to(id).emit('action_success', data);
+            //var enemy_id = players[1 - players[id]];
+            //io.to(enemy_id).emit('enemy_action', data);
+        }
         io.to(id).emit('action_fail');
     };
     
