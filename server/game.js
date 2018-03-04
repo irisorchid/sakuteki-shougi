@@ -29,15 +29,7 @@ var game = (function() {
             io.to(id).emit('enter_success', {
                 player: (player === active_player) ? 0 : 1, 
                 pieces: shougi.getFullBoardState(player),
-                fog: [[0,0,0,0,0,0,0,0,0],
-                [1,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,0,0,0,0],
-                [0,0,0,0,0,1,0,0,0],
-                [0,0,0,0,0,0,0,0,0],
-                [0,0,1,0,0,0,0,0,0],
-                [0,0,0,0,0,0,1,0,0],
-                [0,0,0,0,0,0,0,0,0]]
+                fog: shougi.applyFog(player)
             });
         }
     };

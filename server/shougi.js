@@ -10,7 +10,9 @@ function Shougi() {
 
 Shougi.prototype.initialize = function() {
     this.initialBoard();
-    this.fog = [new Fog(), new Fog()];
+    this.fog = [[], []];
+    this.applyFog(0);
+    this.applyFog(1);
 };
 
 Shougi.prototype.initialBoard = function() {
@@ -46,13 +48,42 @@ Shougi.prototype.initialBoard = function() {
     this.board[5] = new Array(9).fill(null);
 };
 
-//doesn't calculate fog yet
+Shougi.prototype.applyFog = function(player) {
+    this.resetFog(player);
+    for (var y = 0; y < 9; y++) {
+        for (var x = 0; x < 9; x++) {
+            
+            //use a simple 1 aoe fog for now
+            if (this.board[y][x] !== null && this.board[y][x].alliance === player) {
+                for (var i = -1; i < 2; i++) {
+                    for (var j = -1; j < 2; j++) {
+                        var mi = (player) ? 8-y-i: y+i
+                        var mj = (player) ? 8-x-j: x+j
+                        if (mi >= 0 && mi < 9 && mj >= 0 && mj < 9) {
+                            this.fog[player][mi][mj] = 1;
+                        }
+                    }
+                }
+            }
+            
+        }
+    }
+    return this.fog[player];
+};
+
+Shougi.prototype.resetFog = function(player) {
+    this.fog[player] = [];
+    for (var i = 0; i < 9; i++) {
+        this.fog[player].push(new Array(9).fill(0));
+    }
+};
+
 Shougi.prototype.getFullBoardState = function(player) {
     var temp_board = [];
     if (player === 0) {
         for (var y = 0; y < 9; y++) {
             for (var x = 0; x < 9; x++) {
-                if (this.board[y][x] !== null) {
+                if (this.board[y][x] !== null && this.fog[player][y][x] === 1) {
                     temp_board.push({
                         id: this.board[y][x].id,
                         x: x,
@@ -66,12 +97,12 @@ Shougi.prototype.getFullBoardState = function(player) {
     } else if (player === 1) {
         for (var y = 0; y < 9; y++) {
             for (var x = 0; x < 9; x++) {
-                if (this.board[y][x] !== null) {
+                if (this.board[y][x] !== null && this.fog[player][8-y][8-x] === 1) {
                     temp_board.push({
                         id: this.board[y][x].id,
                         x: 8-x,
                         y: 8-y,
-                        alliance: 1 - this.board[y][x].alliance,
+                        alliance: 1-this.board[y][x].alliance,
                         promoted: this.board[y][x].promoted
                     });
                 }
@@ -99,6 +130,7 @@ Shougi.prototype.printBoard = function() {
 // ** Piece
 //=============================================================================
 
+//basically a struct
 function Piece() {
     this.initialize.apply(this, arguments);
 }
@@ -107,22 +139,6 @@ Piece.prototype.initialize = function(id, alliance, promoted) {
     this.id = id;
     this.alliance = alliance;
     this.promoted = promoted;
-};
-
-//=============================================================================
-// ** Fog
-//=============================================================================
-
-//one fog for each player
-function Fog() {
-    this.initialize.apply(this, arguments);
-}
-
-Fog.prototype.initialize = function() {
-    this.grid = [];
-    for (var i = 0; i < 9; i++) {
-        this.grid.push(new Array(9).fill(0));
-    }
 };
 
 module.exports = Shougi;
