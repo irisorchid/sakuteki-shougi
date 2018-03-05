@@ -78,6 +78,7 @@ Shougi.prototype.nextInHand = function(id, player) {
     return null;
 };
 
+//very messy need to clean up; hacky blind capture implementation atm
 Shougi.prototype.processMove = function(player, action) {
     var player_updates = { player: 0 };
     var enemy_updates = { player: 1 };
@@ -87,12 +88,17 @@ Shougi.prototype.processMove = function(player, action) {
     var enemy_actions = { remove: [], reveal: [] };
 
     var vision;
-    //check for piece capture, make sure to handle blind capture?
+    //check for piece capture
     if (this.board[action.destY][action.destX] !== null) {
         //enemy loses vision at captured piece location
         vision = this.board[action.destY][action.destX].currentVision;
         for (var i = 0; i < vision.length; i++) {
             this.fog[1-player][vision[i].y][vision[i].x] -= 1;
+            if (this.fog[1-player][vision[i].y][vision[i].x] === 0) {
+                if (this.board[vision[i].y][vision[i].x] !== null && this.board[vision[i].y][vision[i].x].alliance === player) {
+                    enemy_actions.remove.push({ x: vision[i].x, y: vision[i].y, capture: false });
+                }
+            }
         }
         this.board[action.destY][action.destX].currentVision = [];
         //capture this piece
@@ -100,8 +106,13 @@ Shougi.prototype.processMove = function(player, action) {
         this.hand[player].push(this.board[action.destY][action.destX]);
         this.board[action.destY][action.destX] = null;
         
-        player_actions[remove].push( {x: action.destX, y: action.destY, capture: true} );
-        enemy_actions[remove].push( {x: 8-action.destX, y: 8-action.destY, capture: true} );
+        //flag for remove //if blind capture
+        if (this.fog[player][action.destY][action.destX] === 0) {
+            player_actions.remove.push({ x: -1, y: action.id, capture: true }); //blind capture
+        } else {
+            player_actions.remove.push({ x: action.destX, y: action.destY, capture: true }); //normal capture
+        }
+        enemy_actions.remove.push({ x: action.destX, y: action.destY, capture: true });
     }
     
     //move piece to location
@@ -109,12 +120,21 @@ Shougi.prototype.processMove = function(player, action) {
         //drop
         this.board[action.destY][action.destX] = this.nextInHand(action.id);
     } else {
-        //move
-        //lose vision from original location
+        //lose vision from original location, flag for remove
         vision = this.board[action.y][action.x].currentVision;
         for (var i = 0; i < vision.length; i++) {
             this.fog[player][vision[i].y][vision[i].x] -= 1;
+            if (this.fog[player][vision[i].y][vision[i].x] === 0) {
+                if (this.board[vision[i].y][vision[i].x] !== null && this.board[vision[i].y][vision[i].x].alliance !== player) {
+                    player_actions.remove.push({ x: vision[i].x, y: vision[i].y, capture: false });
+                }
+            }
         }
+        //flag for remove
+        if (this.fog[1-player][action.y][action.x] > 0) {
+            enemy_actions.remove.push( {x: action.x, y: action.y, capture: false} );
+        }
+        //move
         this.board[action.destY][action.destX] = this.board[action.y][action.x];
         this.board[action.y][action.x] = null;
         //promote
@@ -123,17 +143,48 @@ Shougi.prototype.processMove = function(player, action) {
         }
     }
     
-    //gain vision at new location
+    //gain vision at new location, flag for reveal
     vision = this.board[action.destY][action.destX].currentVision = this.board[action.destY][action.destX].getVision(action.destX, action.destY);
     for (var i = 0; i < vision.length; i++) {
+        if (this.fog[player][vision[i].y][vision[i].x] === 0) {
+            if (this.board[vision[i].y][vision[i].x] !== null && this.board[vision[i].y][vision[i].x].alliance !== player) {
+                player_actions.reveal.push({ id: this.board[vision[i].y][vision[i].x].id, x: vision[i].x, y: vision[i].y, promote: this.board[vision[i].y][vision[i].x].promoted });
+            }
+        }
         this.fog[player][vision[i].y][vision[i].x] += 1;
     }
-    
-    delete vision;
+    //flag for reveal
+    if (this.fog[1-player][action.destY][action.destX] > 0) {
+        enemy_actions.reveal.push({ id: action.id, x: action.destX, y: action.destY, promote: this.board[action.destY][action.destX].promoted });
+    }
+    //delete vision;
     
     //this.getfog;
     var player_fog = this.getFog(player);
     var enemy_fog = this.getFog(1-player);
+    
+    //transpose actions for gote
+    if (player === 0) {
+        for (var i = 0; i < enemy_actions.remove.length; i++) {
+            enemy_actions.remove[i].x = 8 - enemy_actions.remove[i].x;
+            enemy_actions.remove[i].y = 8 - enemy_actions.remove[i].y;
+        }
+        for (var i = 0; i < enemy_actions.reveal.length; i++) {
+            enemy_actions.reveal[i].x = 8 - enemy_actions.reveal[i].x;
+            enemy_actions.reveal[i].y = 8 - enemy_actions.reveal[i].y;
+        }
+    } else {
+        for (var i = 0; i < player_actions.remove.length; i++) {
+            if (player_actions.remove[i].x > 0) {
+                player_actions.remove[i].x = 8 - player_actions.remove[i].x;
+                player_actions.remove[i].y = 8 - player_actions.remove[i].y;
+            }
+        }
+        for (var i = 0; i < player_actions.reveal.length; i++) {
+            player_actions.reveal[i].x = 8 - player_actions.reveal[i].x;
+            player_actions.reveal[i].y = 8 - player_actions.reveal[i].y;
+        }
+    }
     
     //join updates
     player_updates.actions = player_actions;
@@ -144,7 +195,7 @@ Shougi.prototype.processMove = function(player, action) {
     return [player_updates, enemy_updates];
 };
 
-//used for player 1
+//used to correct gote incoming actions
 Shougi.prototype.transposeAction = function(action) {
     action.x = 8 - action.x;
     action.y = 8 - action.y;
@@ -191,6 +242,8 @@ Shougi.prototype.legalMove = function(player, action) {
         //TODO: cannot drop in fog
     }
     //TODO: if move, check that piece is correct
+    //TODO: if piece is promoted, promote should be true
+    //TODO: if piece is not promoted, check if promote is legal
     //TODO: check if piece's movement can move to location (also if movement is blocked)
     //TODO: reroute movement for hisha / kaku if blocked
     
@@ -199,21 +252,20 @@ Shougi.prototype.legalMove = function(player, action) {
 
 Shougi.prototype.getBoardState = function(player) {
     var boardstate = [];
-    if (player === 0) {
-        for (var y = 0; y < 9; y++) {
-            for (var x = 0; x < 9; x++) {
-                if (this.board[y][x] !== null && this.fog[player][y][x] > 0) {
-                    boardstate.push({
-                        id: this.board[y][x].id,
-                        x: player ? 8-x : x,
-                        y: player ? 8-y : y,
-                        alliance: player ? 8-this.board[y][x].alliance : this.board[y][x].alliance,
-                        promoted: this.board[y][x].promoted
-                    });
-                }
+    for (var y = 0; y < 9; y++) {
+        for (var x = 0; x < 9; x++) {
+            if (this.board[y][x] !== null && this.fog[player][y][x] > 0) {
+                boardstate.push({
+                    id: this.board[y][x].id,
+                    x: player ? 8-x : x,
+                    y: player ? 8-y : y,
+                    alliance: player ? 1-this.board[y][x].alliance : this.board[y][x].alliance,
+                    promoted: this.board[y][x].promoted
+                });
             }
         }
     }
+    //console.log(boardstate);
     return boardstate;
 };
 

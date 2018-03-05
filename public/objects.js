@@ -45,9 +45,9 @@ BattleManager._createSocket = function() {
         console.log("d/c");
     });
     this._socket.on('action_success', (data) => {
-        //data => player: player that made action; actions: list of updates; fog: grid
-        this._board.loadActions(data.actions); //actions => remove, reveal (all enemy actions)
-        this._board.applyFog(data.fog); //2d array
+        //data => {player:, actions:, fog:}
+        this._board.loadActions(data.actions);
+        this._board.applyFog(data.fog);
         this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
         this._turn = (this._turn + 1) % 2;
         this.pendingAction = false;
@@ -58,6 +58,7 @@ BattleManager._createSocket = function() {
     });
     this._socket.on('action_enemy', (data) => {
         this._board.loadActions(data.actions);
+        this._board.applyFog(data.fog);
         this._turn = (this._turn + 1) % 2;
     });
 }
@@ -97,7 +98,7 @@ Game_Board.prototype.loadPieces = function(pieces) {
 };
 
 Game_Board.prototype.loadActions = function(actions) {
-//remove{x, y, capture} //reveal{id, x, y, promote}
+//remove{x, y, capture} //reveal{id, x, y, promote} //enemy moves are encoded as remove -> reveals for now
     for (var i = 0; i < actions.remove.length; i++) {
         if (actions.remove[i].x === -1) {
             this._nextHiddenPiece(actions.remove[i].y).remove(actions.remove[i].capture);
@@ -253,6 +254,10 @@ Game_Piece.prototype._updateLocation = function() {
         this._sprite.y = 0;
     } else if (this.isOnHand()) {
         //set up function to arrange pieces on hand
+        //just hide it for now
+        this._sprite.visible = false;
+        this._sprite.x = 0;
+        this._sprite.y = 0;
     } else {
         this._sprite.x = (Game.WINDOW_WIDTH + 576) / 2 - (this._x + 1) * 64;
         this._sprite.y = (Game.WINDOW_HEIGHT - 576) / 2 + this._y * 64;
@@ -276,10 +281,15 @@ Game_Piece.prototype._onPointerUp = function() {
         this._active = false;
         BattleManager.pointerActive = false;
         //TODO: promote dialog
+        //TODO: change this to be better //just use this for now
         
-        //just use this for now
-        //TODO: change this to be better
-        if (BattleManager._board._pieceAt(boardX, boardY)) { this._updateLocation(); return; }
+        var temp = BattleManager._board._pieceAt(boardX, boardY);
+        if (temp !== null) {
+            if (temp._alliance === 0) {
+                this._updateLocation(); 
+                return;
+            }
+        }
         if (boardX < 0 || boardX > 8) { this._updateLocation(); return; }
         if (boardY < 0 || boardY > 8) { this._updateLocation(); return; }
         

@@ -43,6 +43,8 @@ var game = (function() {
     
     var actionHandler = function(id, action) {
         //action {id, x, y, destX, destY, promote}
+        
+        if (players[id] === 1) { shougi.transposeAction(action); }
         if (shougi.legalMove(players[id], action)) {
             //data = processMove
             //send data => {player:, action: remove, reveal, fog:}
@@ -50,6 +52,11 @@ var game = (function() {
             //var enemy_id = players[1 - players[id]];
             //io.to(enemy_id).emit('enemy_action', data);
             //active_player = 1 - active_player;
+            var data = shougi.processMove(players[id], action);
+            io.to(id).emit('action_success', data[0]);
+            var enemy_id = players[1 - players[id]];
+            io.to(enemy_id).emit('action_enemy', data[1]);
+            active_player = 1 - active_player;
         }
         io.to(id).emit('action_fail');
     };
