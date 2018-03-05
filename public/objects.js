@@ -46,9 +46,9 @@ BattleManager._createSocket = function() {
     });
     this._socket.on('action_success', (data) => {
         //data => player: player that made action; actions: list of updates; fog: grid
-        this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
         this._board.loadActions(data.actions); //actions => remove, reveal (all enemy actions)
         this._board.applyFog(data.fog); //2d array
+        this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
         this._turn = (this._turn + 1) % 2;
         this.pendingAction = false;
     });
@@ -56,7 +56,7 @@ BattleManager._createSocket = function() {
         this._currentPiece._updateLocation();
         this.pendingAction = false;
     });
-    this._socket.on('enemy_action', (data) => {
+    this._socket.on('action_enemy', (data) => {
         this._board.loadActions(data.actions);
         this._turn = (this._turn + 1) % 2;
     });
@@ -99,7 +99,11 @@ Game_Board.prototype.loadPieces = function(pieces) {
 Game_Board.prototype.loadActions = function(actions) {
 //remove{x, y, capture} //reveal{id, x, y, promote}
     for (var i = 0; i < actions.remove.length; i++) {
-        this._pieceAt(actions.remove[i].x, actions.remove[i].y).remove(actions.remove[i].capture);
+        if (actions.remove[i].x === -1) {
+            this._nextHiddenPiece(actions.remove[i].y).remove(actions.remove[i].capture);
+        } else {
+            this._pieceAt(actions.remove[i].x, actions.remove[i].y).remove(actions.remove[i].capture);
+        }
     }
     for (var i = 0; i < actions.reveal.length; i++) {
         this._nextHiddenPiece(actions.reveal[i].id).move(actions.reveal[i].x, actions.reveal[i].y, actions.reveal[i].promote);

@@ -28,8 +28,8 @@ var game = (function() {
             console.log(players);
             io.to(id).emit('enter_success', {
                 player: (player === active_player) ? 0 : 1, 
-                pieces: shougi.getFullBoardState(player),
-                fog: shougi.fog[player];
+                pieces: shougi.getBoardState(player),
+                fog: shougi.getFog(player)
             });
         }
     };
@@ -42,22 +42,6 @@ var game = (function() {
     };
     
     var actionHandler = function(id, action) {
-        /*
-        active_player = 1 - active_player;
-        io.to(id).emit('action_success'); //just do this for now
-        var enemy_id = players[1 - players[id]];
-        var new_action = {
-            id: action.id,
-            x: 8-action.x,
-            y: 8-action.y,
-            destX: 8-action.destX,
-            destY: 8-action.destY,
-            promote: action.promote
-        };
-        io.to(enemy_id).emit('enemy_action', new_action);
-        */
-        
-        //if legal then process
         //action {id, x, y, destX, destY, promote}
         if (shougi.legalMove(players[id], action)) {
             //data = processMove
@@ -65,6 +49,7 @@ var game = (function() {
             //io.to(id).emit('action_success', data);
             //var enemy_id = players[1 - players[id]];
             //io.to(enemy_id).emit('enemy_action', data);
+            //active_player = 1 - active_player;
         }
         io.to(id).emit('action_fail');
     };
