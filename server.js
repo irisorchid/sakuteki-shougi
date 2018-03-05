@@ -38,3 +38,10 @@ io.on('connection', (socket) => {
 http.listen(port, () => {
     console.log('listening on *:' + port);
 });
+
+/*
+//open console
+var repl = require('repl').start('>');
+repl.context.game = game;
+repl.context.io = io;
+*/
