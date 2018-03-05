@@ -89,12 +89,14 @@ Game_Board.prototype.initialize = function() {
 Game_Board.prototype.loadPieces = function(pieces) {
     this._resetPieces();
     
+    console.log(pieces.length);
     for (var i = 0; i < pieces.length; i++) {
         var piece = this._nextHiddenPiece(pieces[i].id);
         if (piece !== null) {
             piece.loadFromSource(pieces[i].x, pieces[i].y, pieces[i].alliance, pieces[i].promoted);
         }
     }
+    console.log(this._gamePieces);
 };
 
 Game_Board.prototype.loadActions = function(actions) {

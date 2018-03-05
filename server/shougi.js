@@ -175,7 +175,7 @@ Shougi.prototype.processMove = function(player, action) {
         }
     } else {
         for (var i = 0; i < player_actions.remove.length; i++) {
-            if (player_actions.remove[i].x > 0) {
+            if (player_actions.remove[i].x > -1) {
                 player_actions.remove[i].x = 8 - player_actions.remove[i].x;
                 player_actions.remove[i].y = 8 - player_actions.remove[i].y;
             }
@@ -185,6 +185,8 @@ Shougi.prototype.processMove = function(player, action) {
             player_actions.reveal[i].y = 8 - player_actions.reveal[i].y;
         }
     }
+    
+    this.printBoard();
     
     //join updates
     player_updates.actions = player_actions;
