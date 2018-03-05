@@ -43,15 +43,11 @@ var game = (function() {
     
     var actionHandler = function(id, action) {
         //action {id, x, y, destX, destY, promote}
+        //verify id, maybe force disconnect?
+        if (players[id] === undefined) { return; }
         
         if (players[id] === 1) { shougi.transposeAction(action); }
         if (shougi.legalMove(players[id], action)) {
-            //data = processMove
-            //send data => {player:, action: remove, reveal, fog:}
-            //io.to(id).emit('action_success', data);
-            //var enemy_id = players[1 - players[id]];
-            //io.to(enemy_id).emit('enemy_action', data);
-            //active_player = 1 - active_player;
             var data = shougi.processMove(players[id], action);
             io.to(id).emit('action_success', data[0]);
             var enemy_id = players[1 - players[id]];
@@ -59,10 +55,6 @@ var game = (function() {
             active_player = 1 - active_player;
         }
         io.to(id).emit('action_fail');
-    };
-    
-    var sendUpdate = function(data) {
-        //io.emit('update'); //in future should change to emit to room only
     };
     
     return {
