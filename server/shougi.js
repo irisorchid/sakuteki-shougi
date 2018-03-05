@@ -101,18 +101,18 @@ Shougi.prototype.processMove = function(player, action) {
             }
         }
         this.board[action.destY][action.destX].currentVision = [];
-        //capture this piece
-        this.board[action.destY][action.destX].alliance = player;
-        this.hand[player].push(this.board[action.destY][action.destX]);
-        this.board[action.destY][action.destX] = null;
         
         //flag for remove //if blind capture
         if (this.fog[player][action.destY][action.destX] === 0) {
-            player_actions.remove.push({ x: -1, y: action.id, capture: true }); //blind capture
+            player_actions.remove.push({ x: -1, y: this.board[action.destY][action.destX].id, capture: true }); //blind capture
         } else {
             player_actions.remove.push({ x: action.destX, y: action.destY, capture: true }); //normal capture
         }
         enemy_actions.remove.push({ x: action.destX, y: action.destY, capture: true });
+        //capture this piece
+        this.board[action.destY][action.destX].alliance = player;
+        this.hand[player].push(this.board[action.destY][action.destX]);
+        this.board[action.destY][action.destX] = null;
     }
     
     //move piece to location

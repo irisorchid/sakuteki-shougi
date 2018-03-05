@@ -233,7 +233,7 @@ Game_Piece.prototype.promote = function() {
 Game_Piece.prototype.remove = function(capture=false) {
     this._x = -1;
     this._y = -1;
-    this._promoted = false;
+    if (this._id !== 0) { this._promoted = false; } //if statement for display purposes if king is captured
     if (capture) {
         this._alliance = 1 - this._alliance;    
     }
