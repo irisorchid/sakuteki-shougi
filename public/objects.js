@@ -65,7 +65,7 @@ BattleManager._createSocket = function() {
 
 BattleManager._enter = function() {
     this._socket.on('enter_success', (data) => {
-        this.loadBoardState(data); //player: int; board: {id, x, y, alliance, promoted}
+        this.loadBoardState(data);
     });
     this._socket.on('enter_fail', () => {
         //do something
@@ -100,7 +100,7 @@ Game_Board.prototype.loadPieces = function(pieces) {
 };
 
 Game_Board.prototype.loadActions = function(actions) {
-//remove{x, y, capture} //reveal{id, x, y, promote} //enemy moves are encoded as remove -> reveals for now
+//remove{x, y, capture} //reveal{id, x, y, promote}
     for (var i = 0; i < actions.remove.length; i++) {
         if (actions.remove[i].x === -1) {
             this._nextHiddenPiece(actions.remove[i].y).remove(actions.remove[i].capture);

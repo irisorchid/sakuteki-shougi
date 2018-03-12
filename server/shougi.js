@@ -10,15 +10,12 @@ function Shougi() {
 
 Shougi.prototype.initialize = function() {
     this.initialBoard();
-    this.hand = [[], []];
-    this.fog = [[], [], []]; //[2] is just for transposing player 1 fog for now
-    this.applyFog(0);
-    this.applyFog(1);
-    this.resetFog(2);
+    this.resetFog();
 };
 
 Shougi.prototype.initialBoard = function() {
     this.board = new Array(9);
+    this.hand = [[], []];
     for (var i = 0; i < 2; i++) {
         var senpou = [];
         var chuuken = new Array(9).fill(null);
@@ -48,12 +45,19 @@ Shougi.prototype.initialBoard = function() {
     this.board[5] = new Array(9).fill(null);
 };
 
+Shougi.prototype.resetFog = function() {
+    this.fog = [[], [], []]; //[2] is just for transposing player 1 fog for now
+    this.applyFog(0);
+    this.applyFog(1);
+    this.clearFog(2);
+};
+
 Shougi.prototype.applyFog = function(player) {
-    this.resetFog(player);
+    this.clearFog(player);
     for (var y = 0; y < 9; y++) {
         for (var x = 0; x < 9; x++) {
             if (this.board[y][x] !== null && this.board[y][x].alliance === player) {
-                var vision = this.board[y][x].currentVision = this.board[y][x].getVision(x, y);
+                var vision = this.board[y][x].currentVision = this.getVision(x, y, this.board[y][x]);
                 for (var i = 0; i < vision.length; i++) {
                     this.fog[player][vision[i].y][vision[i].x] += 1;
                 }
@@ -62,12 +66,23 @@ Shougi.prototype.applyFog = function(player) {
     }
 };
 
-Shougi.prototype.resetFog = function(player) {
+Shougi.prototype.clearFog = function(player) {
     this.fog[player] = [];
     for (var i = 0; i < 9; i++) {
         this.fog[player].push(new Array(9).fill(0));
     }
 };
+
+Shougi.prototype.getFog = function(player) {
+    if (player === 0) { return this.fog[0]; }
+    for (var y = 0; y < 9; y++) {
+        for (var x = 0; x < 9; x++) {
+            this.fog[2][y][x] = this.fog[1][8-y][8-x];
+        }
+    }
+    return this.fog[2];
+};
+
 
 Shougi.prototype.nextInHand = function(id, player) {
     for (var i = 0; i < this.hand[player]; i++) {
@@ -144,7 +159,7 @@ Shougi.prototype.processMove = function(player, action) {
     }
     
     //gain vision at new location, flag for reveal
-    vision = this.board[action.destY][action.destX].currentVision = this.board[action.destY][action.destX].getVision(action.destX, action.destY);
+    vision = this.board[action.destY][action.destX].currentVision = this.getVision(action.destX, action.destY, this.board[action.destY][action.destX]);
     for (var i = 0; i < vision.length; i++) {
         if (this.fog[player][vision[i].y][vision[i].x] === 0) {
             if (this.board[vision[i].y][vision[i].x] !== null && this.board[vision[i].y][vision[i].x].alliance !== player) {
@@ -163,7 +178,7 @@ Shougi.prototype.processMove = function(player, action) {
     var player_fog = this.getFog(player);
     var enemy_fog = this.getFog(1-player);
     
-    //transpose actions for gote
+    //transpose outgoing actions for gote
     if (player === 0) {
         for (var i = 0; i < enemy_actions.remove.length; i++) {
             enemy_actions.remove[i].x = 8 - enemy_actions.remove[i].x;
@@ -186,8 +201,6 @@ Shougi.prototype.processMove = function(player, action) {
         }
     }
     
-    this.printBoard();
-    
     //join updates
     player_updates.actions = player_actions;
     player_updates.fog = player_fog;
@@ -205,15 +218,8 @@ Shougi.prototype.transposeAction = function(action) {
     action.destY = 8 - action.destY;
 };
 
-Shougi.prototype.getFog = function(player) {
-    if (player === 0) { return this.fog[0]; }
-    for (var y = 0; y < 9; y++) {
-        for (var x = 0; x < 9; x++) {
-            this.fog[2][y][x] = this.fog[1][8-y][8-x];
-        }
-    }
-    return this.fog[2];
-};
+//used to correct gote outgoing actions
+//Shougi.prototype.transposeAction2 = function() {};
 
 Shougi.prototype.legalMove = function(player, action) {
     if (typeof action.id !== 'number') { return false; }
@@ -223,6 +229,7 @@ Shougi.prototype.legalMove = function(player, action) {
     if (typeof action.destY !== 'number') { return false; }
     if (typeof action.promote !== 'boolean') { return false; }
     
+    if (player === 1) { this.transposeAction(action); }
     if (action.id < 0) { return false; }
     if (action.id > 8) { return false; }
     if (action.destX < 0) { return false; }
@@ -234,22 +241,7 @@ Shougi.prototype.legalMove = function(player, action) {
     if (action.y < -1) { return false; }
     if (action.y > 8) { return false; }
     
-    //cannot move on top of own piece, and cannot move in place
-    if (this.board[action.destY][action.destX] !== null && this.board[action.destY][action.destX].alliance === player) { return false; } 
-    
-    if (action.x === -1 || action.y === -1) {
-        if (this.board[action.destY][action.destX] !== null) { return false; }
-        if (this.nextInHand(action.id, player) === null) { return false; }
-        //TODO: check invalid drop locations
-        //TODO: cannot drop in fog
-    }
-    //TODO: if move, check that piece is correct
-    //TODO: if piece is promoted, promote should be true
-    //TODO: if piece is not promoted, check if promote is legal
-    //TODO: check if piece's movement can move to location (also if movement is blocked)
-    //TODO: reroute movement for hisha / kaku if blocked
-    
-    return true;
+    return (action.x === -1 || action.y === -1) ? this.validDrop(player, action) : this.validMove(player, action);
 };
 
 Shougi.prototype.getBoardState = function(player) {
@@ -267,8 +259,146 @@ Shougi.prototype.getBoardState = function(player) {
             }
         }
     }
-    //console.log(boardstate);
     return boardstate;
+};
+
+Shougi.prototype.validPosition = function(x, y) {
+    return !(x < 0 || x > 8 || y < 0 || y > 8);
+};
+
+Shougi.prototype.validDrop = function(player, action) {
+    if (action.promote) { return false; }
+    if (this.board[action.destY][action.destX] !== null) { return false; }
+    if (this.nextInHand(action.id, player) === null) { return false; }
+    if (this.fog[player][action.destY][action.destX] === 0) { return false; }
+    
+    if (action.id >= 5 && action.destY === 8*player) { return false; }
+    if (action.id === 5 && action.destY === 1+6*player) { return false; }
+    
+    return true;
+};
+
+Shougi.prototype.validMove = function(player, action) {
+    var piece = this.board[action.y][action.x];
+    if (piece === null) { return false; }
+    if (piece.id !== action.id) { return false; }
+    //TODO: check if piece's movement can move to location (also if movement is blocked)
+    //TODO: reroute movement for hisha / kaku if blocked
+    //if (this.board[action.destY][action.destX] !== null && this.board[action.destY][action.destX].alliance === player) { return false; }
+    
+    if (action.promote) {
+        if (action.id === 0 || action.id === 3) { return false; }
+        if (piece.promoted) { return false; }
+        if (player === 0) {
+            if (action.destY > 2) { return false; }
+        } else {
+            if (action.destY < 6) { return false; }
+        }
+    }
+    
+    //TODO: check for forced promote
+    
+    return true;
+};
+
+Shougi.prototype.visionDiamond = function(x, y, radius) {
+    var vision = [];
+    for (var j = -radius; j <= radius; j++) {
+        var offset_y = y+j;
+        if (offset_y < 0 || offset_y > 8) { continue; }
+        for (var i = -radius; i <= radius; i++) {
+            var offset_x = x+i;
+            if (offset_x < 0 || offset_x > 8) { continue; }
+            if (i === 0 && j === 0) { continue; }
+            if (Math.abs(i) + Math.abs(j) <= radius) { vision.push({ x: offset_x, y: offset_y }) }
+        }
+    }
+    return vision;
+};
+
+Shougi.prototype.visionInDirection = function(x, y, dx, dy, alliance=-1, limit=0) {
+    var vision = [];
+    var i = x+dx;
+    var j = y+dy;
+    
+    while(this.validPosition(i, j)) {
+        vision.push({ x: i, y: j });
+        if (this.board[j][i] !== null && this.board[j][i].alliance !== alliance) { break; }
+        i += dx;
+        j += dy;
+    }
+    
+    return vision;
+};
+
+Shougi.prototype.visionInPlace = function(x, y) {
+    if (this.validPosition(x, y)) { return [{ x: x, y: y }]; }
+    return [];
+};
+
+Shougi.prototype.getVision = function(x, y, piece) {
+    var vision = [];
+    var forward = 2 * piece.alliance - 1;
+    vision.push({ x: x, y: y });
+    
+    if (piece.id === 0) {
+        vision = vision.concat(this.visionDiamond(x, y, 3));
+    } else if (piece.id === 1) {
+        vision = vision.concat(this.visionDiamond(x, y, 3));
+        if (piece.promoted) {
+            vision = vision.concat(this.visionInPlace(x, y+4));
+            vision = vision.concat(this.visionInPlace(x+4, y));
+            vision = vision.concat(this.visionInPlace(x, y-4));
+            vision = vision.concat(this.visionInPlace(x-4, y));
+        }
+    } else if (piece.id === 2) {
+        vision = vision.concat(this.visionInDirection(x, y, 1, 1, piece.alliance));
+        vision = vision.concat(this.visionInDirection(x, y, 1, -1, piece.alliance));
+        vision = vision.concat(this.visionInDirection(x, y, -1, 1, piece.alliance));
+        vision = vision.concat(this.visionInDirection(x, y, -1, -1, piece.alliance));
+        if (piece.promoted) {
+            vision = vision.concat(this.visionDiamond(x, y, 1));
+        }
+    } else if (piece.id === 3 || piece.id === 4 || piece.promoted) {
+        vision = vision.concat(this.visionDiamond(x, y, 2));
+    } else if (piece.id === 5) {
+        vision = vision.concat(this.visionDiamond(x, y, 3));
+    } else if (piece.id === 6) {
+        vision = vision.concat(this.visionInDirection(x, y, 0, forward, piece.alliance));
+    } else if (piece.id === 7) {
+        vision = vision.concat(this.visionInPlace(x-1, y+forward));
+        vision = vision.concat(this.visionInPlace(x, y+forward));
+        vision = vision.concat(this.visionInPlace(x+1, y+forward));
+        vision = vision.concat(this.visionInPlace(x, y+2*forward));
+    }
+    
+    return vision;
+};
+
+Shougi.prototype.getMovement = function(x, y, piece) {
+    var movement = [];
+    var forward = 2 * piece.alliance - 1;
+    
+    switch (piece.id) {
+        case 0:
+            break;
+        case 1:
+            break;
+        case 2:
+            break;
+        case 3:
+            break;
+        case 4:
+            break;
+        case 5:
+            break;
+        case 6:
+            break;
+        case 7:
+            break;
+    }
+    
+    return movement;
 };
 
 Shougi.prototype.printBoard = function() {
@@ -285,29 +415,11 @@ Shougi.prototype.printBoard = function() {
     }
 };
 
-/*
-Shougi.prototype.getVision = function(id, x, y) {
-    //actually depends on id but use 1 aoe for now for proof of concept
-    //only need board for blocked vision if its used?
-    var vision = [];
-    for (var j = -1; j < 2; j++) {
-        for (var i = -1; i < 2; i++) {
-            var offsetX = x+i;
-            var offsetY = y+j;
-            if (offsetX >= 0 && offsetX < 9 && offsetY >= 0 && offsetY < 9) {
-                vision.push({ x: x+i, y: y+j });
-            }
-        }
-    }
-    return vision
-};*/
-
-//Shougi.prototype.getMovement = function(id, x, y, alliance, promoted) {};
-
 //=============================================================================
 // ** Piece
 //=============================================================================
 
+//struct
 function Piece() {
     this.initialize.apply(this, arguments);
 }
@@ -317,25 +429,6 @@ Piece.prototype.initialize = function(id, alliance, promoted) {
     this.alliance = alliance;
     this.promoted = promoted;
     this.currentVision = [];
-};
-
-Piece.prototype.getVision = function(x, y) {
-    //actually depends on id but use 1 aoe for now for proof of concept
-    //only need board for blocked vision if its used?
-    var vision = [];
-    for (var j = -1; j < 2; j++) {
-        for (var i = -1; i < 2; i++) {
-            var offsetX = x+i;
-            var offsetY = y+j;
-            if (offsetX >= 0 && offsetX < 9 && offsetY >= 0 && offsetY < 9) {
-                vision.push({ x: x+i, y: y+j });
-            }
-        }
-    }
-    return vision
-};
-
-Piece.prototype.getMovement = function(x, y) {
 };
 
 module.exports = Shougi;

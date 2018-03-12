@@ -25,7 +25,7 @@ var game = (function() {
         } else {
             players[player] = id;
             players[id] = player;
-            console.log(players);
+            console.log(players); //change later
             io.to(id).emit('enter_success', {
                 player: (player === active_player) ? 0 : 1, 
                 pieces: shougi.getBoardState(player),
@@ -43,14 +43,15 @@ var game = (function() {
     
     var actionHandler = function(id, action) {
         //action {id, x, y, destX, destY, promote}
-        //verify id, maybe force disconnect?
+        //verify id, maybe force disconnect
         if (players[id] === undefined) { return; }
-        
-        if (players[id] === 1) { shougi.transposeAction(action); }
+        if (players[id] !== active_player) { return; }
+
         if (shougi.legalMove(players[id], action)) {
             var data = shougi.processMove(players[id], action);
-            io.to(id).emit('action_success', data[0]);
             var enemy_id = players[1 - players[id]];
+            
+            io.to(id).emit('action_success', data[0]);
             io.to(enemy_id).emit('action_enemy', data[1]);
             active_player = 1 - active_player;
         }
