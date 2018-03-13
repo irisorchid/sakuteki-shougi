@@ -85,9 +85,9 @@ Shougi.prototype.getFog = function(player) {
 
 
 Shougi.prototype.nextInHand = function(id, player) {
-    for (var i = 0; i < this.hand[player]; i++) {
+    for (var i = 0; i < this.hand[player].length; i++) {
         if (this.hand[player][i].id === id) {
-            return this.hand[player][i].id;
+            return this.hand[player][i];
         }
     }
     return null;
@@ -134,7 +134,11 @@ Shougi.prototype.processMove = function(player, action) {
     //move piece to location
     if (action.x === -1 || action.y === -1) {
         //drop
-        this.board[action.destY][action.destX] = this.nextInHand(action.id);
+        var drop_piece = this.nextInHand(action.id, player);
+        this.board[action.destY][action.destX] = drop_piece;
+        this.hand = this.hand.filter(piece => piece !== drop_piece);
+        //test this
+        console.log(this.hand[player].length);
     } else {
         //lose vision from original location, flag for remove
         vision = this.board[action.y][action.x].currentVision;
@@ -236,7 +240,7 @@ Shougi.prototype.legalMove = function(player, action) {
     
     if (player === 1) { this.transposeAction(action); }
     if (action.id < 0) { return false; }
-    if (action.id > 8) { return false; }
+    if (action.id > 7) { return false; }
     if (action.destX < 0) { return false; }
     if (action.destX > 8) { return false; }
     if (action.destY < 0) { return false; }

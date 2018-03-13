@@ -58,7 +58,11 @@ BattleManager._createSocket = function() {
         this.pendingAction = false;
     });
     this._socket.on('action_fail', () => {
-        this._currentPiece._updateLocation();
+        if (this._currentPiece.isOnHand()) {
+            this._board.arrangeHand(this._currentPiece._id);
+        } else {
+            this._currentPiece._updateLocation();
+        }
         this.pendingAction = false;
     });
     this._socket.on('action_enemy', (data) => {
@@ -118,6 +122,30 @@ Game_Board.prototype.loadActions = function(actions) {
 
 Game_Board.prototype.applyFog = function(fog) {
     this._fogOfWar.applyFogGrid(fog);
+};
+
+Game_Board.prototype.arrangeHand = function(id) {
+    var index = 0;
+    for (var i = 0; i < this._gamePieces[id].length; i++) {
+        if (this._gamePieces[id][i].isOnHand()) {
+            this._gamePieces[id][i]._handPosition = index;
+            this._gamePieces[id][i]._updateLocation();
+            this._gamePieces[id][i]._pushToFront();
+            index++;
+        }
+    }
+};
+
+Game_Board.prototype.handIncrementSize = function(id) {
+    var numPieces = 0;
+    var handStep = (id === 7) ? 160 : 48;
+    for (var i = 0; i < this._gamePieces[id].length; i++) {
+        if (this._gamePieces[id][i].isOnHand()) {
+            numPieces++;
+        }
+    }
+    if (numPieces === 0) { return 0; }
+    return handStep / numPieces;
 };
 
 Game_Board.prototype._clearBoard = function() {
@@ -182,6 +210,7 @@ Game_Piece.prototype.initialize = function(id, x=-1, y=-1, alliance=1, promoted=
     this._sprite = new PIXI.Sprite(this._texture);
     this._sprite.interactive = true;
     this._active = false;
+    this._handPosition = 0;
     
     //using mouse events because touch logic is different
     this._sprite.on('mouseup', this._onPointerUp.bind(this));
@@ -226,6 +255,9 @@ Game_Piece.prototype.move = function(x, y, promote=false) {
     if (promote) {
         this.promote();
     }
+    if (this.isOnHand()) {
+        BattleManager._board.arrangeHand(this._id);
+    }
     this._updateLocation();
 };
 
@@ -240,10 +272,11 @@ Game_Piece.prototype.remove = function(capture=false) {
     this._y = -1;
     if (this._id !== 0) { this._promoted = false; } //if statement for display purposes if king is captured
     if (capture) {
-        this._alliance = 1 - this._alliance;    
+        this._alliance = 1 - this._alliance;
+        BattleManager._board.arrangeHand(this._id);
     }
-    this._updateFrame();
     this._updateLocation();
+    this._updateFrame();
 };
 
 Game_Piece.prototype._updateFrame = function() {
@@ -254,19 +287,28 @@ Game_Piece.prototype._updateFrame = function() {
 };
 
 Game_Piece.prototype._updateLocation = function() {
-    if (!(this._sprite.visible = !this.isHidden())) { //xd //use 0,0 for now
+    if (!(this._sprite.visible = !this.isHidden())) { //xd code //use 0,0 for now
         this._sprite.x = 0;
         this._sprite.y = 0;
     } else if (this.isOnHand()) {
-        //set up function to arrange pieces on hand
-        //just hide it for now
-        this._sprite.visible = false;
-        this._sprite.x = 0;
-        this._sprite.y = 0;
+        this._sprite.x = this._handX() + BattleManager._board.handIncrementSize(this._id) * this._handPosition;
+        this._sprite.y = this._handY();
     } else {
         this._sprite.x = (Game.WINDOW_WIDTH + 576) / 2 - (this._x + 1) * 64;
         this._sprite.y = (Game.WINDOW_HEIGHT - 576) / 2 + this._y * 64;
     }
+};
+
+Game_Piece.prototype._handX = function() {
+    var base = (Game.WINDOW_WIDTH + 576) / 2 + 48;
+    var offset = (8 % this._id) ? 0 : 128;
+    return base + offset;
+};
+
+Game_Piece.prototype._handY = function() {
+    var base = (Game.WINDOW_HEIGHT + 576) / 2 - 256;
+    var offset = Math.floor((this._id - 1) / 2) * 64;
+    return base + offset;
 };
 
 Game_Piece.prototype._pushToFront = function() {
@@ -285,18 +327,29 @@ Game_Piece.prototype._onPointerUp = function() {
         
         this._active = false;
         BattleManager.pointerActive = false;
-        //TODO: promote dialog
-        //TODO: change this to be better //just use this for now
         
+        var promote = false;
+        //TODO: promote dialog
+        
+        if (boardX < 0 || boardX > 8 || boardY < 0 || boardY > 8) {
+            if (this.isOnHand()) {
+                BattleManager._board.arrangeHand(this._id);
+            } else {
+                this._updateLocation();
+            }
+            return;
+        }
         var temp = BattleManager._board._pieceAt(boardX, boardY);
         if (temp !== null) {
             if (temp._alliance === 0) {
-                this._updateLocation(); 
+                if (this.isOnHand()) {
+                    BattleManager._board.arrangeHand(this._id);
+                } else {
+                    this._updateLocation();
+                }
                 return;
             }
         }
-        if (boardX < 0 || boardX > 8) { this._updateLocation(); return; }
-        if (boardY < 0 || boardY > 8) { this._updateLocation(); return; }
         
         BattleManager.performAction(this, {
             id: this._id,
@@ -304,7 +357,7 @@ Game_Piece.prototype._onPointerUp = function() {
             y: this._y,
             destX: boardX,
             destY: boardY,
-            promote: false
+            promote: promote
         });
     } else {
         this._sprite.x = mousePosition.x - this._sprite.width / 2;
