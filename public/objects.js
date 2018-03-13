@@ -48,6 +48,11 @@ BattleManager._createSocket = function() {
         //data => {player:, actions:, fog:}
         this._board.loadActions(data.actions);
         this._board.applyFog(data.fog);
+        //if redirect, change destX, destY
+        if (data.redirect !== undefined) {
+            this._currentAction.destX = data.redirect.x;
+            this._currentAction.destY = data.redirect.y;
+        }
         this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
         this._turn = (this._turn + 1) % 2;
         this.pendingAction = false;
@@ -89,14 +94,12 @@ Game_Board.prototype.initialize = function() {
 Game_Board.prototype.loadPieces = function(pieces) {
     this._resetPieces();
     
-    console.log(pieces.length);
     for (var i = 0; i < pieces.length; i++) {
         var piece = this._nextHiddenPiece(pieces[i].id);
         if (piece !== null) {
             piece.loadFromSource(pieces[i].x, pieces[i].y, pieces[i].alliance, pieces[i].promoted);
         }
     }
-    console.log(this._gamePieces);
 };
 
 Game_Board.prototype.loadActions = function(actions) {
