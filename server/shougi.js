@@ -560,7 +560,10 @@ Shougi.prototype.movementRangeForHisha = function(x, y, piece) {
     range = range.concat(this.movementInDirection(x, y, 1, 0, piece.alliance, true));
     range = range.concat(this.movementInDirection(x, y, -1, 0, piece.alliance, true));
     if (piece.promoted) {
-        
+        range = range.concat(this.movementInPlace(x, y+1, piece.alliance));
+        range = range.concat(this.movementInPlace(x, y-1, piece.alliance));
+        range = range.concat(this.movementInPlace(x+1, y, piece.alliance));
+        range = range.concat(this.movementInPlace(x-1, y, piece.alliance));
     }
     return range;
 };
@@ -572,7 +575,10 @@ Shougi.prototype.movementRangeForKaku = function(x, y, piece) {
     range = range.concat(this.movementInDirection(x, y, -1, 1, piece.alliance));
     range = range.concat(this.movementInDirection(x, y, -1, -1, piece.alliance));
     if (piece.promoted) {
-        
+        range = range.concat(this.movementInPlace(x+1, y+1, piece.alliance));
+        range = range.concat(this.movementInPlace(x+1, y-1, piece.alliance));
+        range = range.concat(this.movementInPlace(x-1, y+1, piece.alliance));
+        range = range.concat(this.movementInPlace(x-1, y-1, piece.alliance));
     }
     return range;
 };
