@@ -96,13 +96,14 @@ Shougi.prototype.nextInHand = function(id, player) {
 //very messy need to clean up; hacky blind capture implementation atm
 Shougi.prototype.processMove = function(player, action) {
     var enemy = 1-player
+    
     var player_updates = { player: 0 };
     var enemy_updates = { player: 1 };
     
     //remove{x, y, capture} //reveal{id, x, y, promote}
     var player_actions = { remove: [], reveal: [] };
     var enemy_actions = { remove: [], reveal: [] };
-
+    
     var vision;
     //check for piece capture
     if (this.board[action.destY][action.destX] !== null) {
@@ -127,6 +128,7 @@ Shougi.prototype.processMove = function(player, action) {
         enemy_actions.remove.push({ x: action.destX, y: action.destY, capture: true });
         //capture this piece
         this.board[action.destY][action.destX].alliance = player;
+        this.board[action.destY][action.destX].promoted = false;
         this.hand[player].push(this.board[action.destY][action.destX]);
         this.board[action.destY][action.destX] = null;
     }
@@ -137,8 +139,6 @@ Shougi.prototype.processMove = function(player, action) {
         var drop_piece = this.nextInHand(action.id, player);
         this.board[action.destY][action.destX] = drop_piece;
         this.hand = this.hand.filter(piece => piece !== drop_piece);
-        //test this
-        console.log(this.hand[player].length);
     } else {
         //lose vision from original location, flag for remove
         vision = this.board[action.y][action.x].currentVision;
@@ -162,6 +162,45 @@ Shougi.prototype.processMove = function(player, action) {
             this.board[action.destY][action.destX].promoted = true;
         }
     }
+    //lose vision of kaku kyosha
+    //enemy lose vision of kaky kyosha, ignore moving piece
+    var recalc_player = [];
+    var recalc_enemy = [];
+    
+    for (var j = 0; j < 9; j++) {
+        for (var i = 0; i < 9; i++) {
+            if (j === action.destY && i === action.destX) { continue; }
+            var piece = this.board[j][i];
+            if (piece === null) { continue; }
+            if (piece.id === 2 || piece.id === 6) {
+                if (piece.alliance === player) {
+                    recalc_player.push([i, j]);
+                    vision = piece.currentVision;
+                    for (var n = 0; n < vision.length; n++) {
+                        this.fog[player][vision[n].y][vision[n].x] -= 1;
+                        if (this.fog[player][vision[n].y][vision[n].x] === 0) {
+                            if (this.board[vision[n].y][vision[n].x] !== null && this.board[vision[n].y][vision[n].x].alliance !== player) {
+                                player_actions.remove.push({ x: vision[n].x, y: vision[n].y, capture: false });
+                            }
+                        }
+                    }
+                } else {
+                    recalc_enemy.push([i, j]);
+                    vision = piece.currentVision;
+                    for (var n = 0; n < vision.length; n++) {
+                        this.fog[enemy][vision[n].y][vision[n].x] -= 1;
+                        if (this.fog[enemy][vision[n].y][vision[n].x] === 0) {
+                            if (this.board[vision[n].y][vision[n].x] !== null && this.board[vision[n].y][vision[n].x].alliance === player) {
+                                if (!(vision[n].y === action.destY && vision[n].x === action.destY)) {
+                                    enemy_actions.remove.push({ x: vision[n].x, y: vision[n].y, capture: false });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     
     //gain vision at new location, flag for reveal
     vision = this.board[action.destY][action.destX].currentVision = this.getVision(action.destX, action.destY, this.board[action.destY][action.destX]);
@@ -173,15 +212,44 @@ Shougi.prototype.processMove = function(player, action) {
         }
         this.fog[player][vision[i].y][vision[i].x] += 1;
     }
+    
+    //recalc vision of kaku kyosha
+    for (var i = 0; i < recalc_player.length; i++) {
+        var tempX = recalc_player[i][0];
+        var tempY = recalc_player[i][1];
+        vision = this.board[tempY][tempX].currentVision = this.getVision(tempX, tempY, this.board[tempY][tempX]);
+        for (var n = 0; n < vision.length; n++) {
+            if (this.fog[player][vision[n].y][vision[n].x] === 0) {
+                if (this.board[vision[n].y][vision[n].x] !== null && this.board[vision[n].y][vision[n].x].alliance !== player) {
+                    player_actions.reveal.push({ id: this.board[vision[n].y][vision[n].x].id, x: vision[n].x, y: vision[n].y, promote: this.board[vision[n].y][vision[n].x].promoted });
+                }
+            }
+            this.fog[player][vision[n].y][vision[n].x] += 1;
+        }
+    }
+    //enemy recalc vision of kaku kyosha
+    for (var i = 0; i < recalc_enemy.length; i++) {
+        var tempX = recalc_enemy[i][0];
+        var tempY = recalc_enemy[i][1];
+        vision = this.board[tempY][tempX].currentVision = this.getVision(tempX, tempY, this.board[tempY][tempX]);
+        for (var n = 0; n < vision.length; n++) {
+            if (this.fog[enemy][vision[n].y][vision[n].x] === 0) {
+                if (this.board[vision[n].y][vision[n].x] !== null && this.board[vision[n].y][vision[n].x].alliance === player) {
+                    if (!(vision[n].y === action.destY && vision[n].x === action.destY)) {
+                        enemy_actions.reveal.push({ id: this.board[vision[n].y][vision[n].x].id, x: vision[n].x, y: vision[n].y, promote: this.board[vision[n].y][vision[n].x].promoted });
+                    }
+                }
+            }
+            this.fog[enemy][vision[n].y][vision[n].x] += 1;
+        }
+    }
+    
     //flag for reveal
     if (this.fog[enemy][action.destY][action.destX] > 0) {
         enemy_actions.reveal.push({ id: action.id, x: action.destX, y: action.destY, promote: this.board[action.destY][action.destX].promoted });
     }
     //delete vision;
-    
-    //do vision recalcs for all onboard kaku / kyosha
-    
-    
+
     //this.getfog;
     var player_fog = this.getFog(player);
     var enemy_fog = this.getFog(enemy);
@@ -224,8 +292,8 @@ Shougi.prototype.processMove = function(player, action) {
 
 //used to correct gote incoming actions
 Shougi.prototype.transposeAction = function(action) {
-    action.x = 8 - action.x;
-    action.y = 8 - action.y;
+    action.x = (action.x === -1) ? -1 : 8 - action.x;
+    action.y = (action.y === -1) ? -1 : 8 - action.y;
     action.destX = 8 - action.destX;
     action.destY = 8 - action.destY;
 };
