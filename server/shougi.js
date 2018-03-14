@@ -131,14 +131,16 @@ Shougi.prototype.processMove = function(player, action) {
         this.board[action.destY][action.destX].promoted = false;
         this.hand[player].push(this.board[action.destY][action.destX]);
         this.board[action.destY][action.destX] = null;
+        //console.log(this.hand);
     }
     
     //move piece to location
     if (action.x === -1 || action.y === -1) {
         //drop
         var drop_piece = this.nextInHand(action.id, player);
+        //console.log(drop_piece);
         this.board[action.destY][action.destX] = drop_piece;
-        this.hand = this.hand.filter(piece => piece !== drop_piece);
+        this.hand[player] = this.hand[player].filter(piece => piece !== drop_piece);
     } else {
         //lose vision from original location, flag for remove
         vision = this.board[action.y][action.x].currentVision;

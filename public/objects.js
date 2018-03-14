@@ -138,7 +138,7 @@ Game_Board.prototype.arrangeHand = function(id) {
 
 Game_Board.prototype.handIncrementSize = function(id) {
     var numPieces = 0;
-    var handStep = (id === 7) ? 160 : 48;
+    var handStep = (id === 7) ? 180 : 72;
     for (var i = 0; i < this._gamePieces[id].length; i++) {
         if (this._gamePieces[id][i].isOnHand()) {
             numPieces++;
@@ -295,7 +295,8 @@ Game_Piece.prototype._updateLocation = function() {
         this._sprite.x = 0;
         this._sprite.y = 0;
     } else if (this.isOnHand()) {
-        this._sprite.x = this._handX() + BattleManager._board.handIncrementSize(this._id) * this._handPosition;
+        var baseIncrement = 6;
+        this._sprite.x = this._handX() + BattleManager._board.handIncrementSize(this._id) * this._handPosition + baseIncrement;
         this._sprite.y = this._handY();
     } else {
         this._sprite.x = (Game.WINDOW_WIDTH + 576) / 2 - (this._x + 1) * 64;
