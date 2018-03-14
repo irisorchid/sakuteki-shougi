@@ -280,7 +280,7 @@ Shougi.prototype.processMove = function(player, action) {
     }
     
     if (action.redirect !== undefined) {
-        player_updates.redirect = (player) ? { x: 8-action.destX, y: 8-action.destY } : { x: action.destX, y: action.destY };
+        player_updates.redirect = (player) ? { x: 8-action.destX, y: 8-action.destY, promote: action.promote } : { x: action.destX, y: action.destY, promote: action.promote };
     }
     
     //join updates
@@ -374,6 +374,13 @@ Shougi.prototype.validMove = function(player, action) {
                 action.redirect = true;
                 action.destX = move.redirect[0];
                 action.destY = move.redirect[1];
+                if (action.promote) {
+                    if (player === 0) {
+                        if (action.destY > 2) { action.promote = false; }
+                    } else {
+                        if (action.destY < 6) { action.promote = false; }
+                    }
+                }
             }
             canMove = true;
             break;

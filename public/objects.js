@@ -52,6 +52,7 @@ BattleManager._createSocket = function() {
         if (data.redirect !== undefined) {
             this._currentAction.destX = data.redirect.x;
             this._currentAction.destY = data.redirect.y;
+            this._currentAction.promote = data.redirect.promote;
         }
         this._currentPiece.move(this._currentAction.destX, this._currentAction.destY, this._currentAction.promote);
         this._turn = (this._turn + 1) % 2;
