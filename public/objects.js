@@ -458,10 +458,10 @@ function Promotion_Button() {
 Promotion_Button.prototype.initialize = function(x, y, width, height, name, callback) {
     this._width = width;
     this._height = height;
-    this._createSprite(x, y, name);
+    this._createSprite(x, y, name, callback);
 };
 
-Promotion_Button.prototype._createSprite = function(x, y, name) {
+Promotion_Button.prototype._createSprite = function(x, y, name, callback) {
     this._sprite = new PIXI.Graphics();
     this._sprite.x = x;
     this._sprite.y = y;
@@ -473,13 +473,13 @@ Promotion_Button.prototype._createSprite = function(x, y, name) {
         fontSize: 24
     });
     
-    this._text.x = (this._width - this._text.width) / 2;
-    this._text.y = (this._height - this._text.height) / 2;
+    this._text.x = Math.floor((this._width - this._text.width) / 2);
+    this._text.y = Math.floor((this._height - this._text.height) / 2);
     this._sprite.addChild(this._text);
     
     this._sprite.interactive = true;
     this._sprite.on('mousedown', this._onButtonDown.bind(this));
-    this._sprite.on('mouseup', this._onButtonUp.bind(this));
+    this._sprite.on('mouseup', callback);
     this._sprite.on('mouseover', this._onButtonOver.bind(this));
     this._sprite.on('mouseout', this._onButtonOut.bind(this));
 };
@@ -493,21 +493,17 @@ Promotion_Button.prototype._drawBackground = function(color) {
 
 Promotion_Button.prototype._onButtonDown = function() {
     this._drawBackground(0x808080);
-    this._text.style = { fill: 0xFFFFFF };
-};
-
-Promotion_Button.prototype._onButtonUp = function() {
-    //this.parentObj.callback.call(this);
+    this._text.style.fill = 0xFFFFFF;
 };
 
 Promotion_Button.prototype._onButtonOver = function() {
     this._drawBackground(0xF0F0F0);
-    this._text.style = { fill: 0x000000 };
+    this._text.style.fill = 0x000000;
 };
 
 Promotion_Button.prototype._onButtonOut = function() {
     this._drawBackground(0xFFFFFF);
-    this._text.style = { fill: 0x000000 };
+    this._text.style.fill = 0x000000 ;
 };
 
 //=============================================================================
@@ -574,6 +570,8 @@ Promotion_Dialog.prototype._drawTitle = function() {
         fontFamily: 'Helvetica',
         fontSize: 24
     });
+    title.x = Math.floor((192 - title.width) / 2);
+    title.y = Math.floor((32 - title.height) / 2);
     this._context.addChild(title);
 };
 

@@ -179,6 +179,9 @@ Shougi.prototype.processMove = function(player, action) {
     }
     //delete vision;
     
+    //do vision recalcs for all onboard kaku / kyosha
+    
+    
     //this.getfog;
     var player_fog = this.getFog(player);
     var enemy_fog = this.getFog(enemy);
