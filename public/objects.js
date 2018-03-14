@@ -247,6 +247,10 @@ Game_Piece.prototype.canPromote = function() {
     return this._id !== 0 && this._id !== 3 && !this._promoted;
 };
 
+Game_Piece.prototype.mustPromote = function(destY) {
+    return (destY === 0 && this._id > 4) || (destY <= 1 && this._id === 5);
+};
+
 Game_Piece.prototype.move = function(x, y, promote=false) {
     //if (x < 0 || x > 8) { return; }
     //if (y < 0 || y > 8) { return; }
@@ -328,9 +332,7 @@ Game_Piece.prototype._onPointerUp = function() {
         this._active = false;
         BattleManager.pointerActive = false;
         
-        var promote = false;
-        //TODO: promote dialog
-        
+        //should be a full legal move check
         if (boardX < 0 || boardX > 8 || boardY < 0 || boardY > 8) {
             if (this.isOnHand()) {
                 BattleManager._board.arrangeHand(this._id);
@@ -350,15 +352,28 @@ Game_Piece.prototype._onPointerUp = function() {
                 return;
             }
         }
+        //should be a full legal move check
         
-        BattleManager.performAction(this, {
-            id: this._id,
-            x: this._x,
-            y: this._y,
-            destX: boardX,
-            destY: boardY,
-            promote: promote
-        });
+        var forcedPromote = this.mustPromote(boardY);
+        if (boardY <= 2 && this.canPromote() && !forcedPromote) {
+            Game.dialog = new Promotion_Dialog(this, {
+                id: this._id,
+                x: this._x,
+                y: this._y,
+                destX: boardX,
+                destY: boardY,
+                promote: false
+            });
+        } else {
+            BattleManager.performAction(this, {
+                id: this._id,
+                x: this._x,
+                y: this._y,
+                destX: boardX,
+                destY: boardY,
+                promote: forcedPromote
+            });
+        }
     } else {
         this._sprite.x = mousePosition.x - this._sprite.width / 2;
         this._sprite.y = mousePosition.y - this._sprite.height / 2;
@@ -431,3 +446,163 @@ Game_Fog.prototype.deactivate = function(x, y) {
     this._spriteGroup.children[y*9+x].alpha = 0;
 };
 */
+
+//=============================================================================
+// ** Promotion_Button
+//=============================================================================
+
+function Promotion_Button() {
+    this.initialize.apply(this, arguments);
+}
+
+Promotion_Button.prototype.initialize = function(x, y, width, height, name, callback) {
+    this._width = width;
+    this._height = height;
+    this._createSprite(x, y, name);
+};
+
+Promotion_Button.prototype._createSprite = function(x, y, name) {
+    this._sprite = new PIXI.Graphics();
+    this._sprite.x = x;
+    this._sprite.y = y;
+    this._drawBackground(0xFFFFFF);
+    
+    this._text = new PIXI.Text(name, {
+        fill: 0x000000,
+        fontFamily: 'Helvetica',
+        fontSize: 24
+    });
+    
+    this._text.x = (this._width - this._text.width) / 2;
+    this._text.y = (this._height - this._text.height) / 2;
+    this._sprite.addChild(this._text);
+    
+    this._sprite.interactive = true;
+    this._sprite.on('mousedown', this._onButtonDown.bind(this));
+    this._sprite.on('mouseup', this._onButtonUp.bind(this));
+    this._sprite.on('mouseover', this._onButtonOver.bind(this));
+    this._sprite.on('mouseout', this._onButtonOut.bind(this));
+};
+
+Promotion_Button.prototype._drawBackground = function(color) {
+    this._sprite.lineStyle(1, 0x808080, 1);
+    this._sprite.beginFill(color);
+    this._sprite.drawRect(0, 0, this._width, this._height);
+    this._sprite.endFill();
+};
+
+Promotion_Button.prototype._onButtonDown = function() {
+    this._drawBackground(0x808080);
+    this._text.style = { fill: 0xFFFFFF };
+};
+
+Promotion_Button.prototype._onButtonUp = function() {
+    //this.parentObj.callback.call(this);
+};
+
+Promotion_Button.prototype._onButtonOver = function() {
+    this._drawBackground(0xF0F0F0);
+    this._text.style = { fill: 0x000000 };
+};
+
+Promotion_Button.prototype._onButtonOut = function() {
+    this._drawBackground(0xFFFFFF);
+    this._text.style = { fill: 0x000000 };
+};
+
+//=============================================================================
+// ** Promotion_Dialog
+//=============================================================================
+
+function Promotion_Dialog() {
+    this.initialize.apply(this, arguments);
+}
+
+Promotion_Dialog.prototype.initialize = function(piece, action) {
+    this._piece = piece;
+    this._action = action;
+    this._createDialog();
+};
+
+Promotion_Dialog.prototype._closeDialog = function() {
+    Game.context.stage.removeChild(this._background);
+    Game.context.stage.removeChild(this._context);
+};
+
+Promotion_Dialog.prototype._createDialog = function() {
+    this._createBackground();
+    this._drawContext();
+    this._drawTitle();
+    this._drawPieces();
+    this._createButtons();
+};
+
+Promotion_Dialog.prototype._createBackground = function() {
+    this._background = new PIXI.Graphics();
+    this._background.interactive = true;
+    this._background.alpha = 0.75;
+    this._background.beginFill(0xA0A0A0);
+    this._background.drawRect(0, 0, Game.WINDOW_WIDTH, Game.WINDOW_HEIGHT);
+    this._background.endFill();
+    Game.context.stage.addChild(this._background);
+};
+
+Promotion_Dialog.prototype._createButtons = function() {
+    var yesButton = new Promotion_Button(8, 112, 84, 40, 'Yes', this._callbackYes.bind(this));
+    var noButton = new Promotion_Button(100, 112, 84, 40, 'No', this._callbackNo.bind(this));
+    
+    this._context.addChild(yesButton._sprite);
+    this._context.addChild(noButton._sprite);
+};
+
+Promotion_Dialog.prototype._drawContext = function() {
+    this._context = new PIXI.Graphics();
+    this._context.beginFill(0xFFFFFF);
+    this._context.drawRect(0, 0, 192, 160);
+    this._context.endFill();
+    this._context.beginFill(0x10A0C0);
+    this._context.drawRect(0, 0, 192, 32);
+    this._context.endFill();
+    this._context.x = (Game.WINDOW_WIDTH - 192) / 2;
+    this._context.y = (Game.WINDOW_HEIGHT - 160) / 2;
+    Game.context.stage.addChild(this._context);
+};
+
+Promotion_Dialog.prototype._drawTitle = function() {
+    var title = new PIXI.Text('Promote?', {
+        fill: 0xFFFFFF,
+        fontFamily: 'Helvetica',
+        fontSize: 24
+    });
+    this._context.addChild(title);
+};
+
+Promotion_Dialog.prototype._drawPieces = function() {
+    var frameX = this._action.id * 64;
+    var baseTexture = PIXI.loader.resources['pieces'].texture;
+    
+    var promotedSprite = new PIXI.Sprite(new PIXI.Texture(baseTexture));
+    promotedSprite.x = 18;
+    promotedSprite.y = 44;
+    promotedSprite.texture.frame = new PIXI.Rectangle(frameX, 64, 64, 64);
+    
+    var unpromotedSprite = new PIXI.Sprite(new PIXI.Texture(baseTexture))
+    unpromotedSprite.x = 110;
+    unpromotedSprite.y = 44;
+    unpromotedSprite.texture.frame = new PIXI.Rectangle(frameX, 0, 64, 64);
+    
+    this._context.addChild(promotedSprite);
+    this._context.addChild(unpromotedSprite);
+};
+
+Promotion_Dialog.prototype._callbackYes = function() {
+    this._action.promote = true;
+    BattleManager.performAction(this._piece, this._action);
+    this._closeDialog();
+};
+
+Promotion_Dialog.prototype._callbackNo = function() {
+    this._action.promote = false;
+    BattleManager.performAction(this._piece, this._action);
+    this._closeDialog();
+};
